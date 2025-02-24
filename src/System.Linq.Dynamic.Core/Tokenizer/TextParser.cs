@@ -10,36 +10,15 @@ namespace System.Linq.Dynamic.Core.Tokenizer;
 public class TextParser
 {
     private const char DefaultNumberDecimalSeparator = '.';
-    private static readonly char[] EscapeCharacters = { '\\', 'a', 'b', 'f', 'n', 'r', 't', 'v' };
-
-    // These aliases are supposed to simply the where clause and make it more human readable
-    private static readonly Dictionary<string, TokenId> PredefinedOperatorAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        { "eq", TokenId.Equal },
-        { "equal", TokenId.Equal },
-        { "ne", TokenId.ExclamationEqual },
-        { "notequal", TokenId.ExclamationEqual },
-        { "neq", TokenId.ExclamationEqual },
-        { "lt", TokenId.LessThan },
-        { "LessThan", TokenId.LessThan },
-        { "le", TokenId.LessThanEqual },
-        { "LessThanEqual", TokenId.LessThanEqual },
-        { "gt", TokenId.GreaterThan },
-        { "GreaterThan", TokenId.GreaterThan },
-        { "ge", TokenId.GreaterThanEqual },
-        { "GreaterThanEqual", TokenId.GreaterThanEqual },
-        { "and", TokenId.DoubleAmpersand },
-        { "AndAlso", TokenId.DoubleAmpersand },
-        { "or", TokenId.DoubleBar },
-        { "OrElse", TokenId.DoubleBar },
-        { "not", TokenId.Exclamation },
-        { "mod", TokenId.Percent }
-    };
+    private static readonly char[] EscapeCharacters = ['\\', 'a', 'b', 'f', 'n', 'r', 't', 'v'];
 
     private readonly char _numberDecimalSeparator;
     private readonly string _text;
     private readonly int _textLen;
     private readonly ParsingConfig _parsingConfig;
+
+    // These aliases simplify the "Where"-clause and make it more human-readable.
+    private readonly Dictionary<string, TokenId> _predefinedOperatorAliases;
 
     private int _textPos;
     private char _ch;
@@ -58,6 +37,29 @@ public class TextParser
     {
         _parsingConfig = config;
 
+        _predefinedOperatorAliases = new(config.IsCaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase)
+        {
+            { "eq", TokenId.Equal },
+            { "equal", TokenId.Equal },
+            { "ne", TokenId.ExclamationEqual },
+            { "notequal", TokenId.ExclamationEqual },
+            { "neq", TokenId.ExclamationEqual },
+            { "lt", TokenId.LessThan },
+            { "LessThan", TokenId.LessThan },
+            { "le", TokenId.LessThanEqual },
+            { "LessThanEqual", TokenId.LessThanEqual },
+            { "gt", TokenId.GreaterThan },
+            { "GreaterThan", TokenId.GreaterThan },
+            { "ge", TokenId.GreaterThanEqual },
+            { "GreaterThanEqual", TokenId.GreaterThanEqual },
+            { "and", TokenId.DoubleAmpersand },
+            { "AndAlso", TokenId.DoubleAmpersand },
+            { "or", TokenId.DoubleBar },
+            { "OrElse", TokenId.DoubleBar },
+            { "not", TokenId.Exclamation },
+            { "mod", TokenId.Percent }
+        };
+
         _numberDecimalSeparator = config.NumberParseCulture?.NumberFormat.NumberDecimalSeparator[0] ?? DefaultNumberDecimalSeparator;
 
         _text = text;
@@ -67,6 +69,10 @@ public class TextParser
         NextToken();
     }
 
+    /// <summary>
+    /// This method is used to clone the current <see cref="TextParser"/>.
+    /// </summary>
+    /// <returns>Cloned <see cref="TextParser"/></returns>
     public TextParser Clone()
     {
         var clone = new TextParser(_parsingConfig, _text);
@@ -94,9 +100,8 @@ public class TextParser
             NextChar();
         }
 
-        // ReSharper disable once RedundantAssignment
-        TokenId tokenId = TokenId.Unknown;
-        int tokenPos = _textPos;
+        TokenId tokenId;
+        var tokenPos = _textPos;
 
         switch (_ch)
         {
@@ -288,23 +293,23 @@ public class TextParser
 
             case '"':
             case '\'':
-                bool balanced = false;
-                char quote = _ch;
+                var quoteIsBalanced = false;
+                var quote = _ch;
 
                 NextChar();
 
                 while (_textPos < _textLen && _ch != quote)
                 {
-                    char next = PeekNextChar();
+                    var nextChar = PeekNextChar();
 
                     if (_ch == '\\')
                     {
-                        if (EscapeCharacters.Contains(next))
+                        if (EscapeCharacters.Contains(nextChar))
                         {
                             NextChar();
                         }
 
-                        if (next == '"')
+                        if (nextChar == '"')
                         {
                             NextChar();
                         }
@@ -314,11 +319,11 @@ public class TextParser
 
                     if (_ch == quote)
                     {
-                        balanced = !balanced;
+                        quoteIsBalanced = !quoteIsBalanced;
                     }
                 }
 
-                if (_textPos == _textLen && !balanced)
+                if (_textPos == _textLen && !quoteIsBalanced)
                 {
                     throw ParseError(_textPos, Res.UnterminatedStringLiteral);
                 }
@@ -329,7 +334,7 @@ public class TextParser
                 break;
 
             default:
-                if (char.IsLetter(_ch) || _ch == '@' || _ch == '_' || _ch == '$' || _ch == '^' || _ch == '~')
+                if (char.IsLetter(_ch) || _ch is '@' or '_' or '$' or '^' or '~')
                 {
                     do
                     {
@@ -348,7 +353,7 @@ public class TextParser
                     } while (char.IsDigit(_ch));
 
                     bool binaryInteger = false;
-                    if (_ch == 'B' || _ch == 'b')
+                    if (_ch is 'B' or 'b')
                     {
                         NextChar();
                         ValidateBinaryChar();
@@ -365,8 +370,8 @@ public class TextParser
                         break;
                     }
 
-                    bool hexInteger = false;
-                    if (_ch == 'X' || _ch == 'x')
+                    var isHexInteger = false;
+                    if (_ch is 'X' or 'x')
                     {
                         NextChar();
                         ValidateHexChar();
@@ -375,22 +380,28 @@ public class TextParser
                             NextChar();
                         } while (IsHexChar(_ch));
 
-                        hexInteger = true;
+                        isHexInteger = true;
                     }
 
-                    if (_ch == 'U' || _ch == 'L')
+                    if (_ch is 'U' or 'L')
                     {
                         NextChar();
                         if (_ch == 'L')
                         {
-                            if (_text[_textPos - 1] == 'U') NextChar();
-                            else throw ParseError(_textPos, Res.InvalidIntegerQualifier, _text.Substring(_textPos - 1, 2));
+                            if (_text[_textPos - 1] == 'U')
+                            {
+                                NextChar();
+                            }
+                            else
+                            {
+                                throw ParseError(_textPos, Res.InvalidIntegerQualifier, _text.Substring(_textPos - 1, 2));
+                            }
                         }
                         ValidateExpression();
                         break;
                     }
 
-                    if (hexInteger)
+                    if (isHexInteger)
                     {
                         break;
                     }
@@ -406,11 +417,15 @@ public class TextParser
                         } while (char.IsDigit(_ch));
                     }
 
-                    if (_ch == 'E' || _ch == 'e')
+                    if (_ch is 'E' or 'e')
                     {
                         tokenId = TokenId.RealLiteral;
                         NextChar();
-                        if (_ch == '+' || _ch == '-') NextChar();
+                        if (_ch is '+' or '-')
+                        {
+                            NextChar();
+                        }
+
                         ValidateDigit();
                         do
                         {
@@ -418,9 +433,21 @@ public class TextParser
                         } while (char.IsDigit(_ch));
                     }
 
-                    if (_ch == 'F' || _ch == 'f') NextChar();
-                    if (_ch == 'D' || _ch == 'd') NextChar();
-                    if (_ch == 'M' || _ch == 'm') NextChar();
+                    if (_ch is 'F' or 'f')
+                    {
+                        NextChar();
+                    }
+
+                    if (_ch is 'D' or 'd')
+                    {
+                        NextChar();
+                    }
+
+                    if (_ch is 'M' or 'm')
+                    {
+                        NextChar();
+                    }
+
                     break;
                 }
 
@@ -504,14 +531,14 @@ public class TextParser
         return ParseError(CurrentToken.Pos, format, args);
     }
 
+    private TokenId GetAliasedTokenId(TokenId tokenId, string alias)
+    {
+        return tokenId == TokenId.Identifier && _predefinedOperatorAliases.TryGetValue(alias, out TokenId id) ? id : tokenId;
+    }
+
     private static Exception ParseError(int pos, string format, params object[] args)
     {
         return new ParseException(string.Format(CultureInfo.CurrentCulture, format, args), pos);
-    }
-
-    private static TokenId GetAliasedTokenId(TokenId tokenId, string alias)
-    {
-        return tokenId == TokenId.Identifier && PredefinedOperatorAliases.TryGetValue(alias, out TokenId id) ? id : tokenId;
     }
 
     private static bool IsHexChar(char c)

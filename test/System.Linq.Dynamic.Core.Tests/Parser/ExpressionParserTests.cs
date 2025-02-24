@@ -13,7 +13,7 @@ namespace System.Linq.Dynamic.Core.Tests.Parser;
 
 public partial class ExpressionParserTests
 {
-    private readonly Mock<IDynamicLinkCustomTypeProvider> _dynamicTypeProviderMock;
+    private readonly Mock<IDynamicLinqCustomTypeProvider> _dynamicTypeProviderMock;
 
     private readonly ParsingConfig _parsingConfig;
 
@@ -27,10 +27,14 @@ public partial class ExpressionParserTests
         D = 8,
     };
 
+    public class MyView
+    {
+        public Dictionary<string, string>? Properties { get; set; }
+    }
 
     public ExpressionParserTests()
     {
-        _dynamicTypeProviderMock = new Mock<IDynamicLinkCustomTypeProvider>();
+        _dynamicTypeProviderMock = new Mock<IDynamicLinqCustomTypeProvider>();
         _dynamicTypeProviderMock.Setup(dt => dt.GetCustomTypes()).Returns(new HashSet<Type>() { typeof(Company), typeof(MainCompany) });
         _dynamicTypeProviderMock.Setup(dt => dt.ResolveType(typeof(Company).FullName!)).Returns(typeof(Company));
         _dynamicTypeProviderMock.Setup(dt => dt.ResolveType(typeof(MainCompany).FullName!)).Returns(typeof(MainCompany));
@@ -48,7 +52,7 @@ public partial class ExpressionParserTests
     {
         // Arrange
         var expression = "@0 | @1";
-#if NET452
+#if NET48
         var expected = "Convert((Convert(A) | Convert(B)))";
 #else
         var expected = "Convert((Convert(A, Int32) | Convert(B, Int32)), ExampleFlags)";
@@ -78,7 +82,7 @@ public partial class ExpressionParserTests
     {
         // Arrange
         var expression = "@0 & @1";
-#if NET452
+#if NET48
         var expected = "Convert((Convert(A) & Convert(B)))";
 #else
         var expected = "Convert((Convert(A, Int32) & Convert(B, Int32)), ExampleFlags)";
@@ -108,7 +112,7 @@ public partial class ExpressionParserTests
     {
         // Arrange
         var expression = "@0 | @1 | @2";
-#if NET452
+#if NET48
         var expected = "Convert(((Convert(A) | Convert(B)) | Convert(C)))";
 #else
         var expected = "Convert(((Convert(A, Int32) | Convert(B, Int32)) | Convert(C, Int32)), ExampleFlags)";
@@ -138,7 +142,7 @@ public partial class ExpressionParserTests
     {
         // Arrange
         var expression = "@0 & @1 & @2";
-#if NET452
+#if NET48
         var expected = "Convert(((Convert(A) & Convert(B)) & Convert(C)))";
 #else
         var expected = "Convert(((Convert(A, Int32) & Convert(B, Int32)) & Convert(C, Int32)), ExampleFlags)";
@@ -284,6 +288,20 @@ public partial class ExpressionParserTests
         Check.That(parsedExpression).Equals("value(System.Nullable`1[System.Int64][]).Contains(x.MainCompanyId)");
     }
 
+    [Fact]
+    public void Parse_CastActingOnIt()
+    {
+        // Arrange
+        var parameters = new[] { ParameterExpressionHelper.CreateParameterExpression(typeof(User), "u") };
+        var sut = new ExpressionParser(parameters, "DisplayName.Any(int(it) > 109)", null, null);
+
+        // Act
+        var result = sut.Parse(null);
+
+        // Assert
+        result.Should().NotBeNull();
+    }
+
     [Theory]
     [InlineData("string(\"\")", "")]
     [InlineData("string(\"a\")", "a")]
@@ -302,7 +320,7 @@ public partial class ExpressionParserTests
     }
 
     [Theory]
-#if NET452
+#if NET48
     [InlineData("int?(5)", typeof(int?), "Convert(5)")]
     [InlineData("int?(null)", typeof(int?), "Convert(null)")]
     [InlineData("string(null)", typeof(string), "Convert(null)")]
@@ -329,9 +347,10 @@ public partial class ExpressionParserTests
     [InlineData("it.MainCompany.Name != null", "(company.MainCompany.Name != null)")]
     [InlineData("@MainCompany.Companies.Count() > 0", "(company.MainCompany.Companies.Count() > 0)")]
     [InlineData("Company.Equals(null, null)", "Equals(null, null)")]
+    [InlineData("Equals(null)", "company.Equals(null)")]
     [InlineData("MainCompany.Name", "company.MainCompany.Name")]
     [InlineData("Name", "company.Name")]
-    [InlineData("company.Name","company.Name")]
+    [InlineData("company.Name", "company.Name")]
     [InlineData("DateTime", "company.DateTime")]
     public void Parse_When_PrioritizePropertyOrFieldOverTheType_IsTrue(string expression, string result)
     {
@@ -339,7 +358,8 @@ public partial class ExpressionParserTests
         var config = new ParsingConfig
         {
             IsCaseSensitive = true,
-            CustomTypeProvider = _dynamicTypeProviderMock.Object
+            CustomTypeProvider = _dynamicTypeProviderMock.Object,
+            AllowEqualsAndToStringMethodsOnObject = true
         };
         ParameterExpression[] parameters = { ParameterExpressionHelper.CreateParameterExpression(typeof(Company), "company") };
         var sut = new ExpressionParser(parameters, expression, null, config);
@@ -390,5 +410,35 @@ public partial class ExpressionParserTests
 
         // Assert
         parsedExpression.Should().StartWith(result);
+    }
+
+    [Theory]
+    [InlineData("99 & \"txt\"", "Concat(Convert(99, Object), Convert(\"txt\", Object))")]
+    [InlineData("\"txt\" & 99", "Concat(Convert(\"txt\", Object), Convert(99, Object))")]
+    [InlineData("\"txt\" & \"abc\"", "Concat(\"txt\", \"abc\")")]
+    [InlineData("99 + \"txt\"", "Concat(Convert(99, Object), Convert(\"txt\", Object))")]
+    [InlineData("\"txt\" + 99", "Concat(Convert(\"txt\", Object), Convert(99, Object))")]
+    [InlineData("\"txt\" + \"abc\"", "Concat(\"txt\", \"abc\")")]
+    public void Parse_StringConcat(string expression, string result)
+    {
+        // Arrange
+        var parameters = new[] { Expression.Parameter(typeof(int), "VarA") };
+        var parser = new ExpressionParser(parameters, expression, [], new ParsingConfig { ConvertObjectToSupportComparison = true });
+
+        // Act
+        var parsedExpression = parser.Parse(typeof(string)).ToString();
+
+        // Assert
+        parsedExpression.Should().Be(result);
+    }
+
+    [Fact]
+    public void Parse_InvalidExpressionShouldThrowArgumentException()
+    {
+        // Arrange & Act
+        Action act = () => DynamicExpressionParser.ParseLambda<MyView, bool>(ParsingConfig.Default, false, "Properties[\"foo\"] > 2", Array.Empty<object>());
+
+        // Assert
+        act.Should().Throw<ArgumentException>().WithMessage("Method 'Compare' not found on type 'System.String' or 'System.Int32'");
     }
 }

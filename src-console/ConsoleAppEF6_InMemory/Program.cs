@@ -17,9 +17,16 @@ static class Program
     {
         await using (var context = new TestContextEF6())
         {
-            context.Products.Add(new ProductDynamic { NullableInt = 1, Dict = new Dictionary<string, object> { { "Name", "test" } } });
-            context.Products.Add(new ProductDynamic { NullableInt = 2, Dict = new Dictionary<string, object> { { "Name1", "test1" } } });
+            context.Products.Add(new ProductDynamic { NullableInt = 1, Key = 123, Dict = new Dictionary<string, object> { { "Name", "test" } } });
+            context.Products.Add(new ProductDynamic { NullableInt = 2, Key = 456, Dict = new Dictionary<string, object> { { "Name1", "test1" } } });
             await context.SaveChangesAsync();
+        }
+
+        // #784
+        await using (var context = new TestContextEF6())
+        {
+            var result784 = context.Products.Where("NullableInt = @0", 1).ToDynamicArray<ProductDynamic>();
+            Console.WriteLine("a1 {0}", string.Join(",", result784.Select(r => r.Key)));
         }
 
         await using (var context = new TestContextEF6())

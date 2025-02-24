@@ -16,7 +16,7 @@ namespace ConsoleApp_net5_0_EF6_InMemory
                 .AddConsole();
         });
 
-        public virtual DbSet<ProductDynamic> Products { get; set; }
+        public virtual DbSet<ProductDynamic> Products { get; set; } = null!;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -25,7 +25,6 @@ namespace ConsoleApp_net5_0_EF6_InMemory
 
             optionsBuilder.UseInMemoryDatabase("TestContextEF6");
         }
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

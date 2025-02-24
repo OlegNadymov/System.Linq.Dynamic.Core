@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq.Dynamic.Core.Config;
 using System.Linq.Dynamic.Core.CustomTypeProviders;
 using System.Linq.Dynamic.Core.Exceptions;
+using System.Linq.Dynamic.Core.Tests.Helpers;
 using System.Linq.Dynamic.Core.Tests.Helpers.Models;
 using System.Linq.Dynamic.Core.Tests.TestHelpers;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Moq;
 using NFluent;
@@ -25,18 +26,18 @@ public class DynamicExpressionParserTests
     {
         public Foo FooValue { get; set; }
 
-        public string Zero() => null;
+        public string Zero() => string.Empty;
 
-        public string One(int x) => null;
+        public string One(int x) => string.Empty;
 
-        public string Two(int x, int y) => null;
+        public string Two(int x, int y) => string.Empty;
     }
 
     private class MyClass
     {
-        public List<string> MyStrings { get; set; }
+        public List<string> MyStrings { get; set; } = null!;
 
-        public List<MyClass> MyClasses { get; set; }
+        public List<MyClass> MyClasses { get; set; } = null!;
 
         public int Foo()
         {
@@ -48,13 +49,19 @@ public class DynamicExpressionParserTests
             Name = nameof(Foo);
         }
 
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
-        public MyClass Child { get; set; }
+        public string? Description { get; set; }
+
+        public MyClass Child { get; set; } = null!;
     }
 
     private class MyClassCustomTypeProvider : DefaultDynamicLinqCustomTypeProvider
     {
+        public MyClassCustomTypeProvider() : base(ParsingConfig.Default)
+        {
+        }
+
         public override HashSet<Type> GetCustomTypes()
         {
             var customTypes = base.GetCustomTypes();
@@ -75,11 +82,6 @@ public class DynamicExpressionParserTests
     {
         public int? Age { get; set; }
         public int TotalIncome { get; set; }
-    }
-
-    public class CustomClassWithStaticMethod
-    {
-        public static int GetAge(int x) => x;
     }
 
     public class CustomClassWithMethod
@@ -121,7 +123,7 @@ public class DynamicExpressionParserTests
 
         public static implicit operator string(CustomTextClass customTextValue)
         {
-            return customTextValue?.Origin;
+            return customTextValue.Origin;
         }
 
         public static implicit operator CustomTextClass(string origin)
@@ -256,59 +258,30 @@ public class DynamicExpressionParserTests
         }
     }
 
-    public static class StaticHelper
+    internal class TestClass794
     {
-        public static Guid? GetGuid(string name)
-        {
-            return Guid.NewGuid();
-        }
+        public byte ByteValue { get; set; }
+        public byte? NullableByteValue { get; set; }
+        public int IntValue { get; set; }
+        public int? NullableIntValue { get; set; }
     }
 
-    public class TestCustomTypeProvider : AbstractDynamicLinqCustomTypeProvider, IDynamicLinkCustomTypeProvider
+    [Theory]
+    [InlineData("Average")]
+    [InlineData("Max")]
+    [InlineData("Min")]
+    [InlineData("Sum")]
+    public void DynamicExpressionParser_ParseLambda_Aggregate(string operation)
     {
-        private HashSet<Type> _customTypes;
-
-        public virtual HashSet<Type> GetCustomTypes()
+        foreach (var propertyInfo in typeof(TestClass794).GetProperties())
         {
-            if (_customTypes != null)
-            {
-                return _customTypes;
-            }
+            var expression = $"{operation}({propertyInfo.Name})"; // e.g., "Sum(ByteValue)"
 
-            _customTypes = new HashSet<Type>(FindTypesMarkedWithDynamicLinqTypeAttribute(new[] { GetType().GetTypeInfo().Assembly }))
-            {
-                typeof(CustomClassWithStaticMethod),
-                typeof(StaticHelper)
-            };
-            return _customTypes;
-        }
+            // Act on IEnumerable
+            DynamicExpressionParser.ParseLambda(itType: typeof(IEnumerable<TestClass794>), resultType: typeof(double?), expression: expression);
 
-        public Dictionary<Type, List<MethodInfo>> GetExtensionMethods()
-        {
-            var types = GetCustomTypes();
-
-            var list = new List<Tuple<Type, MethodInfo>>();
-
-            foreach (var type in types)
-            {
-                var extensionMethods = type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-                    .Where(x => x.IsDefined(typeof(ExtensionAttribute), false)).ToList();
-
-                extensionMethods.ForEach(x => list.Add(new Tuple<Type, MethodInfo>(x.GetParameters()[0].ParameterType, x)));
-            }
-
-            return list.GroupBy(x => x.Item1, tuple => tuple.Item2).ToDictionary(key => key.Key, methods => methods.ToList());
-        }
-
-        public Type ResolveType(string typeName)
-        {
-            return Type.GetType(typeName);
-        }
-
-        public Type ResolveTypeBySimpleName(string typeName)
-        {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            return ResolveTypeBySimpleName(assemblies, typeName);
+            // Act on IQueryable
+            DynamicExpressionParser.ParseLambda(itType: typeof(IQueryable<TestClass794>), resultType: typeof(double?), expression: expression);
         }
     }
 
@@ -326,7 +299,7 @@ public class DynamicExpressionParserTests
 
         // Assert
         ConstantExpression constantExpression = (ConstantExpression)((BinaryExpression)expression.Body).Right;
-        object value = constantExpression.Value;
+        var value = constantExpression.Value;
 
         Check.That(value).IsEqualTo("x");
     }
@@ -345,7 +318,7 @@ public class DynamicExpressionParserTests
 
         // Assert
         ConstantExpression constantExpression = (ConstantExpression)((BinaryExpression)expression.Body).Right;
-        object value = constantExpression.Value;
+        var value = constantExpression.Value;
 
         Check.That(value).IsEqualTo(new DateTime(2022, 3, 2));
     }
@@ -366,11 +339,11 @@ public class DynamicExpressionParserTests
         // Assert
         expressionAsString.Should().Be("Param_0 => (Param_0.Id == value(System.Linq.Dynamic.Core.Parser.WrappedValue`1[System.Int32]).Value)");
 
-        ConstantExpression constantExpression = (ConstantExpression)((MemberExpression)((BinaryExpression)expression.Body).Right).Expression;
-        var wrappedObj = constantExpression!.Value;
+        ConstantExpression constantExpression = (ConstantExpression)((MemberExpression)((BinaryExpression)expression.Body).Right).Expression!;
+        var wrappedObj = constantExpression.Value!;
 
-        PropertyInfo propertyInfo = wrappedObj!.GetType().GetProperty("Value", BindingFlags.Instance | BindingFlags.Public);
-        object value = propertyInfo!.GetValue(wrappedObj);
+        PropertyInfo propertyInfo = wrappedObj.GetType().GetProperty("Value", BindingFlags.Instance | BindingFlags.Public)!;
+        var value = propertyInfo.GetValue(wrappedObj);
 
         Check.That(value).IsEqualTo(42);
     }
@@ -422,8 +395,8 @@ public class DynamicExpressionParserTests
         var queriedPropType = queriedProp.PropertyType;
         var queriedPropUnderlyingType = Nullable.GetUnderlyingType(queriedPropType);
 
-        Check.That(expressionAsString).IsEqualTo($"Param_0 => (Param_0.{propName} == {ExpressionString.NullableConversion($"value(System.Linq.Dynamic.Core.Parser.WrappedValue`1[{queriedPropUnderlyingType}]).Value")})");
-        dynamic constantExpression = (ConstantExpression)((MemberExpression)((UnaryExpression)((BinaryExpression)expression.Body).Right).Operand).Expression;
+        expressionAsString.Should().StartWith($"Param_0 => (Param_0.{propName}").And.Contain($"System.Linq.Dynamic.Core.Parser.WrappedValue`1[{queriedPropUnderlyingType}])");
+        dynamic constantExpression = (ConstantExpression)((MemberExpression)((UnaryExpression)((BinaryExpression)expression.Body).Right).Operand).Expression!;
         object wrapperObj = constantExpression.Value;
 
         var propertyInfo = wrapperObj.GetType().GetProperty("Value", BindingFlags.Instance | BindingFlags.Public)!;
@@ -455,6 +428,34 @@ public class DynamicExpressionParserTests
         Check.That(result).IsNotNull();
         Check.That(result).HasSize(expected.Count);
         Check.That(result.ToArray()[0]).Equals(expected[0]);
+    }
+
+    // #626
+    [Theory]
+    [InlineData("BooleanVariable1 && Bool2", true)]
+    [InlineData("BooleanVariable1 || Bool2", true)]
+    [InlineData("BooleanVariable1 && Bool3", false)]
+    [InlineData("BooleanVariable1 || Bool3", true)]
+    [InlineData("BooleanVariable1 && BooleanVariable4", false)]
+    [InlineData("BooleanVariable1 || BooleanVariable4", true)]
+    public void DynamicExpressionParser_ParseLambda_WithStruct_UsingOperators(string query, bool expectedResult)
+    {
+        // Assign
+        var model = new
+        {
+            BooleanVariable1 = new BooleanVariable(true),
+            Bool2 = true,
+            Bool3 = false,
+            BooleanVariable4 = new BooleanVariable(false)
+        };
+
+        // Act
+        var expr = DynamicExpressionParser.ParseLambda(model.GetType(), null, query);
+        var compiled = expr.Compile();
+        var result = compiled.DynamicInvoke(model);
+
+        // Assert
+        result.Should().Be(expectedResult);
     }
 
     [Fact]
@@ -491,8 +492,7 @@ public class DynamicExpressionParserTests
         };
 
         // Act
-        var query =
-            "Users.GroupBy(x => new { x.Profile.Age }).OrderBy(gg => gg.Key.Age).Select(j => new (j.Key.Age, j.Sum(k => k.Income) As TotalIncome))";
+        var query = "Users.GroupBy(x => new { x.Profile.Age }).OrderBy(gg => gg.Key.Age).Select(j => new (j.Key.Age, j.Sum(k => k.Income) As TotalIncome))";
         var expression = DynamicExpressionParser.ParseLambda(null, query, externals);
         var del = expression.Compile();
         var result = del.DynamicInvoke() as IEnumerable<dynamic>;
@@ -516,8 +516,7 @@ public class DynamicExpressionParserTests
         var qry = testList.AsQueryable();
 
         // Act
-        var query =
-            "GroupBy(x => new { x.Profile.Age }, it).OrderBy(gg => gg.Key.Age).Select(j => new (j.Key.Age, j.Sum(k => k.Income) As TotalIncome))";
+        var query = "GroupBy(x => new { x.Profile.Age }, it).OrderBy(gg => gg.Key.Age).Select(j => new (j.Key.Age, j.Sum(k => k.Income) As TotalIncome))";
         var expression = DynamicExpressionParser.ParseLambda(qry.GetType(), null, query);
         var del = expression.Compile();
         var result = del.DynamicInvoke(qry) as IEnumerable<dynamic>;
@@ -612,13 +611,34 @@ public class DynamicExpressionParserTests
         Assert.NotNull(result);
     }
 
+    // #801
+    [Fact]
+    public void DynamicExpressionParser_ParseLambda_IQueryable()
+    {
+        // Assign
+        var qry = new[]
+        {
+            new
+            {
+                MessageClassName = "mc"
+            }
+        }.AsQueryable();
+
+        // Act
+        var expression = DynamicExpressionParser.ParseLambda(qry.GetType(), null, "it.GroupBy(MessageClassName).Select(it.Key).Where(it != null).Distinct().OrderBy(it).Take(1000)");
+
+        // Assert
+        expression.ToDebugView().Should().Contain(".Call System.Linq.Queryable");
+        expression.ToDebugView().Should().NotContain(".Call System.Linq.Enumerable");
+    }
+
     // https://github.com/StefH/System.Linq.Dynamic.Core/issues/58
     [Fact]
     public void DynamicExpressionParser_ParseLambda_Issue58()
     {
         // Arrange
-        var customTypeProvider = new Mock<IDynamicLinkCustomTypeProvider>();
-        customTypeProvider.Setup(c => c.GetCustomTypes()).Returns(new HashSet<Type> { typeof(MyClass) });
+        var customTypeProvider = new Mock<IDynamicLinqCustomTypeProvider>();
+        customTypeProvider.Setup(c => c.GetCustomTypes()).Returns([typeof(MyClass)]);
         var config = new ParsingConfig
         {
             CustomTypeProvider = customTypeProvider.Object
@@ -724,28 +744,28 @@ public class DynamicExpressionParserTests
     public void DynamicExpressionParser_ParseLambda_ParameterExpressionMethodCall_ReturnsIntExpression()
     {
         var expression = DynamicExpressionParser.ParseLambda(true,
-            new[] { Expression.Parameter(typeof(int), "x") },
+            [Expression.Parameter(typeof(int), "x")],
             typeof(int),
             "x + 1");
         Assert.Equal(typeof(int), expression.Body.Type);
     }
 
-    public static object[][] Decimals()
+    public static IEnumerable<object?[]> Decimals()
     {
-        return new object[][]
-        {
-            new object[] { "de-DE", "1m", 1f },
-            new object[] { "de-DE", "-42,0m", -42m },
-            new object[] { "de-DE", "3,215m", 3.215m },
+        return
+        [
+            ["de-DE", "1m", 1f],
+            ["de-DE", "-42,0m", -42m],
+            ["de-DE", "3,215m", 3.215m],
 
-            new object[] { null, "1m", 1f },
-            new object[] { null, "-42.0m", -42m },
-            new object[] { null, "3.215m", 3.215m }
-        };
+            [null, "1m", 1f],
+            [null, "-42.0m", -42m],
+            [null, "3.215m", 3.215m]
+        ];
     }
     [Theory]
     [MemberData(nameof(Decimals))]
-    public void DynamicExpressionParser_ParseLambda_Decimal(string culture, string expression, decimal expected)
+    public void DynamicExpressionParser_ParseLambda_Decimal(string? culture, string expression, decimal expected)
     {
         // Arrange
         var config = new ParsingConfig();
@@ -764,24 +784,24 @@ public class DynamicExpressionParserTests
         result.Should().Be(expected);
     }
 
-    public static object[][] Floats()
+    public static IEnumerable<object?[]> Floats()
     {
-        return new object[][]
-        {
-            new object[] { "de-DE", "1F", 1f },
-            new object[] { "de-DE", "1f", 1f },
-            new object[] { "de-DE", "-42f", -42d },
-            new object[] { "de-DE", "3,215f", 3.215d },
+        return
+        [
+            ["de-DE", "1F", 1f],
+            ["de-DE", "1f", 1f],
+            ["de-DE", "-42f", -42d],
+            ["de-DE", "3,215f", 3.215d],
 
-            new object[] { null, "1F", 1f },
-            new object[] { null, "1f", 1f },
-            new object[] { null, "-42f", -42d },
-            new object[] { null, "3.215f", 3.215d },
-        };
+            [null, "1F", 1f],
+            [null, "1f", 1f],
+            [null, "-42f", -42d],
+            [null, "3.215f", 3.215d],
+        ];
     }
     [Theory]
     [MemberData(nameof(Floats))]
-    public void DynamicExpressionParser_ParseLambda_Float(string culture, string expression, float expected)
+    public void DynamicExpressionParser_ParseLambda_Float(string? culture, string expression, float expected)
     {
         // Arrange
         var config = new ParsingConfig();
@@ -800,28 +820,28 @@ public class DynamicExpressionParserTests
         result.Should().Be(expected);
     }
 
-    public static IEnumerable<object[]> Doubles()
+    public static IEnumerable<object?[]> Doubles()
     {
-        return new object[][]
-        {
-            new object[] { "de-DE", "1D", 1d },
-            new object[] { "de-DE", "1d", 1d },
-            new object[] { "de-DE", "-42d", -42d },
-            new object[] { "de-DE", "3,215d", 3.215d },
-            new object[] { "de-DE", "1,2345E-4", 0.00012345d },
-            new object[] { "de-DE", "1,2345E4", 12345d },
+        return
+        [
+            ["de-DE", "1D", 1d],
+            ["de-DE", "1d", 1d],
+            ["de-DE", "-42d", -42d],
+            ["de-DE", "3,215d", 3.215d],
+            ["de-DE", "1,2345E-4", 0.00012345d],
+            ["de-DE", "1,2345E4", 12345d],
 
-            new object[] { null, "1D", 1d },
-            new object[] { null, "1d", 1d },
-            new object[] { null, "-42d", -42d },
-            new object[] { null, "3.215d", 3.215d },
-            new object[] { null, "1.2345E-4", 0.00012345d },
-            new object[] { null, "1.2345E4", 12345d }
-        };
+            [null, "1D", 1d],
+            [null, "1d", 1d],
+            [null, "-42d", -42d],
+            [null, "3.215d", 3.215d],
+            [null, "1.2345E-4", 0.00012345d],
+            [null, "1.2345E4", 12345d]
+        ];
     }
     [Theory]
     [MemberData(nameof(Doubles))]
-    public void DynamicExpressionParser_ParseLambda_Double(string culture, string expression, double expected)
+    public void DynamicExpressionParser_ParseLambda_Double(string? culture, string expression, double expected)
     {
         // Arrange
         var config = new ParsingConfig();
@@ -842,7 +862,7 @@ public class DynamicExpressionParserTests
 
     public class EntityDbo
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 
     [Fact]
@@ -873,7 +893,7 @@ public class DynamicExpressionParserTests
     public void DynamicExpressionParser_ParseLambda_StringLiteral_ReturnsBooleanLambdaExpression()
     {
         var expression = DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") }, typeof(bool), "Property1 == \"test\"");
+            [Expression.Parameter(typeof(string), "Property1")], typeof(bool), "Property1 == \"test\"");
         Assert.Equal(typeof(bool), expression.Body.Type);
     }
 
@@ -881,16 +901,7 @@ public class DynamicExpressionParserTests
     public void DynamicExpressionParser_ParseLambda_StringLiteralEmpty_ReturnsBooleanLambdaExpression()
     {
         var expression = DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") }, typeof(bool), "Property1 == \"\"");
-        Assert.Equal(typeof(bool), expression.Body.Type);
-    }
-
-    [Fact]
-    public void DynamicExpressionParser_ParseLambda_Config_StringLiteralEmpty_ReturnsBooleanLambdaExpression()
-    {
-        var config = new ParsingConfig();
-        var expression = DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") }, typeof(bool), "Property1 == \"\"");
+            [Expression.Parameter(typeof(string), "Property1")], typeof(bool), "Property1 == \"\"");
         Assert.Equal(typeof(bool), expression.Body.Type);
     }
 
@@ -899,7 +910,7 @@ public class DynamicExpressionParserTests
     {
         // Act
         var expression = DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") },
+            [Expression.Parameter(typeof(string), "Property1")],
             typeof(bool),
             string.Format("Property1 == {0}", "\"test \\\"string\""));
 
@@ -947,7 +958,7 @@ public class DynamicExpressionParserTests
     {
         // Act
         var expression = DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") },
+            [Expression.Parameter(typeof(string), "Property1")],
             typeof(bool),
             string.Format("Property1 == {0}", "\"\\\"test\""));
 
@@ -956,13 +967,28 @@ public class DynamicExpressionParserTests
         Assert.Equal("\"\"test\"", rightValue);
     }
 
+    [Theory] // #786
+    [InlineData("Escaped", "\"{\\\"PropertyA\\\":\\\"\\\"}\"")]
+    [InlineData("Verbatim", @"""{\""PropertyA\"":\""\""}""")]
+    // [InlineData("Raw", """"{\"PropertyA\":\"\"}"""")] // TODO : does not work ???
+    public void DynamicExpressionParser_ParseLambda_StringLiteral_EscapedJson(string _, string expression)
+    {
+        // Act
+        var result = DynamicExpressionParser
+            .ParseLambda(typeof(object), expression)
+            .Compile()
+            .DynamicInvoke();
+
+        result.Should().Be("{\"PropertyA\":\"\"}");
+    }
+
     [Fact]
     public void DynamicExpressionParser_ParseLambda_StringLiteral_MissingClosingQuote()
     {
         var expectedRightValue = "\"test\\\"";
 
         Assert.Throws<ParseException>(() => DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") },
+            [Expression.Parameter(typeof(string), "Property1")],
             typeof(bool),
             string.Format("Property1 == {0}", expectedRightValue)));
     }
@@ -972,7 +998,7 @@ public class DynamicExpressionParserTests
     {
         // Act
         var expression = DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") },
+            [Expression.Parameter(typeof(string), "Property1")],
             typeof(bool),
             string.Format("Property1 == {0}", "\"test\\\\string\""));
 
@@ -986,7 +1012,7 @@ public class DynamicExpressionParserTests
     {
         // Act
         var expression = DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") },
+            [Expression.Parameter(typeof(string), "Property1")],
             typeof(bool),
             string.Format("Property1 == {0}", "\"test\\\\new\""));
 
@@ -1003,7 +1029,7 @@ public class DynamicExpressionParserTests
 
         //Act
         var expression = DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") },
+            [Expression.Parameter(typeof(string), "Property1")],
             typeof(Boolean),
             string.Format("{0} >= {1}", "Property1.IndexOf(\"\\\\\")", expectedRightValue));
 
@@ -1021,13 +1047,13 @@ public class DynamicExpressionParserTests
     {
         var expectedRightValue = "0";
         var expression = DynamicExpressionParser.ParseLambda(
-            new[] { Expression.Parameter(typeof(string), "Property1") },
-            typeof(Boolean),
+            [Expression.Parameter(typeof(string), "Property1")],
+            typeof(bool),
             string.Format("{0} >= {1}", "Property1.IndexOf(\"\\\"\")", expectedRightValue));
 
         var leftValue = ((BinaryExpression)expression.Body).Left.ToString();
         var rightValue = ((BinaryExpression)expression.Body).Right.ToString();
-        Assert.Equal(typeof(Boolean), expression.Body.Type);
+        Assert.Equal(typeof(bool), expression.Body.Type);
         Assert.Equal("Property1.IndexOf(\"\"\")", leftValue);
         Assert.Equal(expectedRightValue, rightValue);
     }
@@ -1035,10 +1061,20 @@ public class DynamicExpressionParserTests
     [Fact]
     public void DynamicExpressionParser_ParseLambda_TupleToStringMethodCall_ReturnsStringLambdaExpression()
     {
+        // Arrange
+        var config = new ParsingConfig
+        {
+            AllowEqualsAndToStringMethodsOnObject = true
+        };
+
+        // Act
         var expression = DynamicExpressionParser.ParseLambda(
+            config,
             typeof(Tuple<int>),
             typeof(string),
             "it.ToString()");
+
+        // Assert
         Assert.Equal(typeof(string), expression.ReturnType);
     }
 
@@ -1057,7 +1093,7 @@ public class DynamicExpressionParserTests
         // Act
         var lambdaExpression = DynamicExpressionParser.ParseLambda(config, typeof(CustomClassWithStaticMethod), null, expression);
         var del = lambdaExpression.Compile();
-        var result = (int)del.DynamicInvoke(context);
+        var result = (int?)del.DynamicInvoke(context);
 
         // Assert
         Check.That(result).IsEqualTo(10);
@@ -1121,7 +1157,7 @@ public class DynamicExpressionParserTests
         Action action = () => DynamicExpressionParser.ParseLambda(typeof(CustomClassWithMethod), null, expression);
 
         // Assert
-        action.Should().Throw<ParseException>().WithMessage("Methods on type 'CustomClassWithMethod' are not accessible");
+        action.Should().Throw<ParseException>().WithMessage("Method 'GetAge' on type 'CustomClassWithMethod' is not accessible.");
     }
 
     // [Fact]
@@ -1156,7 +1192,7 @@ public class DynamicExpressionParserTests
         Assert.NotNull(boolLambda);
 
         var del = lambda.Compile();
-        var result = (bool)del.DynamicInvoke(user);
+        var result = (bool)del.DynamicInvoke(user)!;
 
         // Assert
         Assert.True(result);
@@ -1176,7 +1212,7 @@ public class DynamicExpressionParserTests
         Assert.NotNull(boolLambda);
 
         var del = lambda.Compile();
-        var result = (bool)del.DynamicInvoke(user);
+        var result = (bool)del.DynamicInvoke(user)!;
 
         // Assert
         Assert.True(result);
@@ -1199,7 +1235,7 @@ public class DynamicExpressionParserTests
         Assert.NotNull(dtLambda);
 
         var del = lambda.Compile();
-        var result = (bool)del.DynamicInvoke(user);
+        var result = (bool?)del.DynamicInvoke(user);
 
         // Assert
         Assert.True(result);
@@ -1213,7 +1249,7 @@ public class DynamicExpressionParserTests
         var parameterExpression = Expression.Parameter(typeof(string));
 
         // Act
-        var lambda = DynamicExpressionParser.ParseLambda(new[] { parameterExpression }, typeof(object), expressionText);
+        var lambda = DynamicExpressionParser.ParseLambda([parameterExpression], typeof(object), expressionText);
 
         // Assert
         lambda.Should().NotBeNull();
@@ -1238,7 +1274,7 @@ public class DynamicExpressionParserTests
         Assert.NotNull(guidLambda);
 
         var del = lambda.Compile();
-        var result = (Guid)del.DynamicInvoke(user);
+        var result = (Guid?)del.DynamicInvoke(user);
 
         // Assert
         Assert.Equal(guidEmpty, result);
@@ -1262,7 +1298,7 @@ public class DynamicExpressionParserTests
 
         // Act 2
         var del = lambda.Compile();
-        var result = (string)del.DynamicInvoke(textHolder);
+        var result = (string?)del.DynamicInvoke(textHolder);
 
         // Assert 2
         Assert.Equal("name1 (note1)", result);
@@ -1286,7 +1322,7 @@ public class DynamicExpressionParserTests
 
         // Act 2
         var del = lambda.Compile();
-        var result = (string)del.DynamicInvoke(textHolder);
+        var result = (string?)del.DynamicInvoke(textHolder);
 
         // Assert 2
         Assert.Equal("note1 (name1)", result);
@@ -1360,6 +1396,114 @@ public class DynamicExpressionParserTests
     }
 
     [Fact]
+    public void DynamicExpressionParser_ParseLambda_StaticClassWithStaticPropertyWithSameNameAsNormalProperty()
+    {
+        // Arrange
+        var config = new ParsingConfig
+        {
+            CustomTypeProvider = new TestCustomTypeProvider()
+        };
+
+        var user = new User
+        {
+            Id = new Guid("854f6ac8-71f9-4f79-8cd7-3ca46eaa02e6")
+        };
+
+        var expressionText = "Id == System.Linq.Dynamic.Core.Tests.Helpers.Models.UserInfo.Key";
+
+        // Act
+        var lambdaExpression = DynamicExpressionParser.ParseLambda(config, typeof(User), null, expressionText);
+        var boolExpression = (Expression<Func<User, bool>>)lambdaExpression;
+
+        var del = boolExpression.Compile();
+        var result = (bool?)del.DynamicInvoke(user);
+
+        // Assert
+        result.Should().Be(false);
+    }
+
+    [Fact]
+    public void DynamicExpressionParser_ParseLambda_StaticClassWithStaticProperty()
+    {
+        // Arrange
+        var config = new ParsingConfig
+        {
+            CustomTypeProvider = new TestCustomTypeProvider()
+        };
+
+        var user = new User
+        {
+            Id = new Guid("854f6ac8-71f9-4f79-8cd7-3ca46eaa02e6")
+        };
+
+        var expressionText = "Id == StaticHelper.NewStaticGuid";
+
+        // Act
+        var lambdaExpression = DynamicExpressionParser.ParseLambda(config, typeof(User), null, expressionText);
+        var boolExpression = (Expression<Func<User, bool>>)lambdaExpression;
+
+        var del = boolExpression.Compile();
+        var result = (bool?)del.DynamicInvoke(user);
+
+        // Assert
+        result.Should().Be(false);
+    }
+
+    [Fact]
+    public void DynamicExpressionParser_ParseLambda_NestedStaticClassWithStaticProperty()
+    {
+        // Arrange
+        var config = new ParsingConfig
+        {
+            CustomTypeProvider = new TestCustomTypeProvider()
+        };
+
+        var user = new User
+        {
+            Id = new Guid("854f6ac8-71f9-4f79-8cd7-3ca46eaa02e6")
+        };
+
+        var expressionText = "Id == StaticHelper.Nested.NewNestedStaticProperty";
+
+        // Act
+        var lambdaExpression = DynamicExpressionParser.ParseLambda(config, typeof(User), null, expressionText);
+        var boolExpression = (Expression<Func<User, bool>>)lambdaExpression;
+
+        var del = boolExpression.Compile();
+        var result = (bool?)del.DynamicInvoke(user);
+
+        // Assert
+        result.Should().Be(false);
+    }
+
+    [Fact]
+    public void DynamicExpressionParser_ParseLambda_NestedStaticClassWithStaticMethod()
+    {
+        // Arrange
+        var config = new ParsingConfig
+        {
+            CustomTypeProvider = new TestCustomTypeProvider()
+        };
+
+        var user = new User
+        {
+            Id = new Guid("854f6ac8-71f9-4f79-8cd7-3ca46eaa02e6")
+        };
+
+        var expressionText = "Id == StaticHelper.Nested.NewNestedStaticMethod()";
+
+        // Act
+        var lambdaExpression = DynamicExpressionParser.ParseLambda(config, typeof(User), null, expressionText);
+        var boolExpression = (Expression<Func<User, bool>>)lambdaExpression;
+
+        var del = boolExpression.Compile();
+        var result = (bool?)del.DynamicInvoke(user);
+
+        // Assert
+        result.Should().Be(false);
+    }
+
+    [Fact]
     public void DynamicExpressionParser_ParseLambda_Operator_Less_Greater_With_Guids()
     {
         var config = new ParsingConfig
@@ -1379,14 +1523,106 @@ public class DynamicExpressionParserTests
 
         // Act
         var lambda = DynamicExpressionParser.ParseLambda(config, typeof(User), null, expressionText, user);
-        var guidLambda = lambda as Expression<Func<User, Guid>>;
-        Assert.NotNull(guidLambda);
+        var guidLambda = (Expression<Func<User, Guid>>)lambda;
 
-        var del = lambda.Compile();
-        var result = (Guid)del.DynamicInvoke(user);
+        var del = guidLambda.Compile();
+        var result = (Guid?)del.DynamicInvoke(user);
 
         // Assert
-        Assert.Equal(anotherId, result);
+        result.Should().Be(anotherId);
+    }
+
+    [Fact]
+    public void DynamicExpressionParser_ParseLambda_CustomType_Method_With_ExpressionString()
+    {
+        // Arrange
+        var config = new ParsingConfig
+        {
+            CustomTypeProvider = new TestCustomTypeProvider()
+        };
+
+        var user = new User();
+
+        // Act : char
+        var expressionTextChar = "StaticHelper.Filter(\"C == 'c'\")";
+        var lambdaChar = DynamicExpressionParser.ParseLambda(config, typeof(User), null, expressionTextChar, user);
+        var funcChar = (Expression<Func<User, string>>)lambdaChar;
+
+        var delegateChar = funcChar.Compile();
+        var resultChar = (string?)delegateChar.DynamicInvoke(user);
+
+        // Assert : int
+        resultChar.Should().Be("C == 'c'");
+
+        // Act : int
+        var expressionTextIncome = "StaticHelper.Filter(\"Income == 5\")";
+        var lambdaIncome = DynamicExpressionParser.ParseLambda(config, typeof(User), null, expressionTextIncome, user);
+        var funcIncome = (Expression<Func<User, string>>)lambdaIncome;
+
+        var delegateIncome = funcIncome.Compile();
+        var resultIncome = (string?)delegateIncome.DynamicInvoke(user);
+
+        // Assert : int
+        resultIncome.Should().Be("Income == 5");
+
+        // Act : string
+        // Replace  "   with \"
+        // Replace \"   with \\\"
+        StaticHelper.Filter("UserName == \"x\"");
+        var expressionTextUserName = "StaticHelper.Filter(\"UserName == \\\"x\\\"\")";
+        var lambdaUserName = DynamicExpressionParser.ParseLambda(config, typeof(User), null, expressionTextUserName, user);
+        var funcUserName = (Expression<Func<User, string>>)lambdaUserName;
+
+        var delegateUserName = funcUserName.Compile();
+        var resultUserName = (string?)delegateUserName.DynamicInvoke(user);
+
+        // Assert : string
+        resultUserName.Should().Be(@"UserName == ""x""");
+
+        // Act : string
+        // Replace  "   with \"
+        // Replace \"   with \"\"
+        var configNonDefault = new ParsingConfig
+        {
+            CustomTypeProvider = new TestCustomTypeProvider(),
+            StringLiteralParsing = StringLiteralParsingType.EscapeDoubleQuoteByTwoDoubleQuotes
+        };
+        expressionTextUserName = "StaticHelper.Filter(\"UserName == \"\"x\"\"\")";
+        lambdaUserName = DynamicExpressionParser.ParseLambda(configNonDefault, typeof(User), null, expressionTextUserName, user);
+        funcUserName = (Expression<Func<User, string>>)lambdaUserName;
+
+        delegateUserName = funcUserName.Compile();
+        resultUserName = (string?)delegateUserName.DynamicInvoke(user);
+
+        // Assert : string
+        resultUserName.Should().Be(@"UserName == ""x""");
+    }
+
+    [Fact]
+    public void DynamicExpressionParser_ParseLambda_CustomType_Method_With_ComplexExpressionString()
+    {
+        // Arrange
+        var config = new ParsingConfig
+        {
+            CustomTypeProvider = new TestCustomTypeProvider()
+        };
+
+        var user = new User();
+
+        // Replace  "   with   \"
+        // Replace \"   with \\\"
+        var _ = StaticHelper.In(Guid.NewGuid(), StaticHelper.SubSelect("Identity", "LegalPerson", "StaticHelper.In(ParentId, StaticHelper.SubSelect(  \"LegalPersonId\",     \"PointSiteTD\",     \"Identity = 5\",   \"\"))     ", ""));
+        var expressionText = "StaticHelper.In(Id,             StaticHelper.SubSelect(\"Identity\", \"LegalPerson\", \"StaticHelper.In(ParentId, StaticHelper.SubSelect(\\\"LegalPersonId\\\", \\\"PointSiteTD\\\", \\\"Identity = 5\\\", \\\"\\\"))\", \"\"))";
+
+        // Act
+        var lambda = DynamicExpressionParser.ParseLambda(config, typeof(User), null, expressionText, user);
+        var func = (Expression<Func<User, bool>>)lambda;
+
+        var compile = func.Compile();
+        var result = (bool?)compile.DynamicInvoke(user);
+
+        // Assert
+        result.Should().Be(false);
     }
 
     [Theory]
@@ -1432,13 +1668,13 @@ public class DynamicExpressionParserTests
     [Theory]
     [InlineData(@"p0.Equals(""Testing"", 3)", "testinG", true)]
     [InlineData(@"p0.Equals(""Testing"", StringComparison.InvariantCultureIgnoreCase)", "testinG", true)]
-    public void DynamicExpressionParser_ParseLambda_SupportEnumerationStringComparison(string expressionAsString, string testValue, bool expectedResult)
+    public void DynamicExpressionParser_ParseLambda_StringEquals(string expressionAsString, string testValue, bool expectedResult)
     {
         // Arrange
         var p0 = Expression.Parameter(typeof(string), "p0");
 
         // Act
-        var expression = DynamicExpressionParser.ParseLambda(new[] { p0 }, typeof(bool), expressionAsString);
+        var expression = DynamicExpressionParser.ParseLambda([p0], typeof(bool), expressionAsString);
         var del = expression.Compile();
         var result = del.DynamicInvoke(testValue) as bool?;
 
@@ -1446,12 +1682,110 @@ public class DynamicExpressionParserTests
         Check.That(result).IsEqualTo(expectedResult);
     }
 
+    // #799
+    [Theory]
+    [InlineData(@"UserName.Equals(""Testing"", 3) and Income > 0")]
+    [InlineData(@"UserName.Equals(""Testing"", StringComparison.InvariantCultureIgnoreCase) and Income > 0")]
+    [InlineData(@"Income > 0 && UserName.Equals(""Testing"", 3)")]
+    [InlineData(@"Income > 0 && UserName.Equals(""Testing"", StringComparison.InvariantCultureIgnoreCase)")]
+    public void DynamicExpressionParser_ParseLambda_StringEquals_WithCombinedCondition(string expressionAsString)
+    {
+        // Arrange
+        var u = Expression.Parameter(typeof(User), "u");
+
+        // Act
+        var expression = DynamicExpressionParser.ParseLambda([u], typeof(bool), expressionAsString);
+        var del = expression.Compile();
+        var result = del.DynamicInvoke(new User { UserName = "testinG", Income = 10 }) as bool?;
+
+        // Assert
+        Check.That(result).IsEqualTo(true);
+    }
+
+    // #803
+    [Fact]
+    public void DynamicExpressionParser_ParseLambda_Calling_Equals_On_ConstantString()
+    {
+        // Arrange
+        var parameters = new[]
+        {
+            Expression.Parameter(typeof(MyClass), "myClass")
+        };
+
+        var invokerArguments = new object[]
+        {
+            new MyClass { Name = "Foo" }
+        };
+
+        // Act
+        var expression = "Name == \"test\" || Name.ToLower() == \"abc\" or \"foo\".Equals(it.Name, StringComparison.OrdinalIgnoreCase)";
+        var lambdaExpression = DynamicExpressionParser.ParseLambda(parameters, null, expression);
+        var del = lambdaExpression.Compile();
+        var result = del.DynamicInvoke(invokerArguments);
+
+        // Assert
+        result.Should().Be(true);
+    }
+
+    // #810
+    [Fact]
+    public void DynamicExpressionParser_ParseLambda_Calling_ToLower_On_String()
+    {
+        // Arrange
+        var parameters = new[]
+        {
+            Expression.Parameter(typeof(MyClass), "myClass")
+        };
+
+        var invokerArguments = new object[]
+        {
+            new MyClass
+            {
+                Name = "Foo",
+                Description = "Bar"
+            }
+        };
+
+        // Act
+        var expression = "(Name != null && Convert.ToString(Name).ToLower().Contains(\"foo\")) or (Description != null && Convert.ToString(Description).ToLower().Contains(\"bar\"))";
+        var lambdaExpression = DynamicExpressionParser.ParseLambda(parameters, null, expression);
+        var del = lambdaExpression.Compile();
+        var result = del.DynamicInvoke(invokerArguments);
+
+        // Assert
+        result.Should().Be(true);
+    }
+
+    [Fact]
+    public void DynamicExpressionParser_ParseLambda_StringEquals_WithMemberString()
+    {
+        // Arrange
+        var parameters = new[]
+        {
+            Expression.Parameter(typeof(MyClass), "myClass")
+        };
+
+        var invokerArguments = new List<object>
+        {
+            new MyClass { Name = "Foo" }
+        };
+
+        // Act
+        var expression = "Name == \"test\" || Name.Equals(\"foo\", StringComparison.OrdinalIgnoreCase)";
+        var lambdaExpression = DynamicExpressionParser.ParseLambda(parameters, null, expression);
+        var del = lambdaExpression.Compile();
+        var result = del.DynamicInvoke(invokerArguments.ToArray());
+
+        // Assert
+        result.Should().Be(true);
+    }
+
     [Fact]
     public void DynamicExpressionParser_ParseLambda_NullPropagation_InstanceMethod_0_Arguments()
     {
         // Arrange
-        var customTypeProvider = new Mock<IDynamicLinkCustomTypeProvider>();
-        customTypeProvider.Setup(c => c.GetCustomTypes()).Returns(new HashSet<Type> { typeof(Foo) });
+        var customTypeProvider = new Mock<IDynamicLinqCustomTypeProvider>();
+        customTypeProvider.Setup(c => c.GetCustomTypes()).Returns([typeof(Foo)]);
         var config = new ParsingConfig
         {
             CustomTypeProvider = customTypeProvider.Object
@@ -1462,7 +1796,7 @@ public class DynamicExpressionParserTests
         var lambdaExpression = DynamicExpressionParser.ParseLambda(config, typeof(Foo), null, expression, new Foo());
 
         // Assert
-#if NETCOREAPP3_1
+#if NETCOREAPP3_1_OR_GREATER || NET6_0_OR_GREATER
         lambdaExpression.ToString().Should().Be("Param_0 => IIF((((Param_0 != null) AndAlso (Param_0.FooValue != null)) AndAlso (Param_0.FooValue.Zero() != null)), Convert(Param_0.FooValue.Zero().Length, Nullable`1), null)");
 #else
         lambdaExpression.ToString().Should().Be("Param_0 => IIF((((Param_0 != null) AndAlso (Param_0.FooValue != null)) AndAlso (Param_0.FooValue.Zero() != null)), Convert(Param_0.FooValue.Zero().Length), null)");
@@ -1473,8 +1807,8 @@ public class DynamicExpressionParserTests
     public void DynamicExpressionParser_ParseLambda_NullPropagation_InstanceMethod_1_Argument()
     {
         // Arrange
-        var customTypeProvider = new Mock<IDynamicLinkCustomTypeProvider>();
-        customTypeProvider.Setup(c => c.GetCustomTypes()).Returns(new HashSet<Type> { typeof(Foo) });
+        var customTypeProvider = new Mock<IDynamicLinqCustomTypeProvider>();
+        customTypeProvider.Setup(c => c.GetCustomTypes()).Returns([typeof(Foo)]);
         var config = new ParsingConfig
         {
             CustomTypeProvider = customTypeProvider.Object
@@ -1485,7 +1819,7 @@ public class DynamicExpressionParserTests
         var lambdaExpression = DynamicExpressionParser.ParseLambda(config, typeof(Foo), null, expression, new Foo());
 
         // Assert
-#if NETCOREAPP3_1
+#if NETCOREAPP3_1_OR_GREATER || NET6_0_OR_GREATER
         lambdaExpression.ToString().Should().Be("Param_0 => IIF((((Param_0 != null) AndAlso (Param_0.FooValue != null)) AndAlso (Param_0.FooValue.One(1) != null)), Convert(Param_0.FooValue.One(1).Length, Nullable`1), null)");
 #else
         lambdaExpression.ToString().Should().Be("Param_0 => IIF((((Param_0 != null) AndAlso (Param_0.FooValue != null)) AndAlso (Param_0.FooValue.One(1) != null)), Convert(Param_0.FooValue.One(1).Length), null)");
@@ -1496,8 +1830,8 @@ public class DynamicExpressionParserTests
     public void DynamicExpressionParser_ParseLambda_NullPropagation_InstanceMethod_2_Arguments()
     {
         // Arrange
-        var customTypeProvider = new Mock<IDynamicLinkCustomTypeProvider>();
-        customTypeProvider.Setup(c => c.GetCustomTypes()).Returns(new HashSet<Type> { typeof(Foo) });
+        var customTypeProvider = new Mock<IDynamicLinqCustomTypeProvider>();
+        customTypeProvider.Setup(c => c.GetCustomTypes()).Returns([typeof(Foo)]);
         var config = new ParsingConfig
         {
             CustomTypeProvider = customTypeProvider.Object
@@ -1508,7 +1842,7 @@ public class DynamicExpressionParserTests
         var lambdaExpression = DynamicExpressionParser.ParseLambda(config, typeof(Foo), null, expression, new Foo());
 
         // Assert
-#if NETCOREAPP3_1
+#if NETCOREAPP3_1_OR_GREATER || NET6_0_OR_GREATER
         lambdaExpression.ToString().Should().Be("Param_0 => IIF((((Param_0 != null) AndAlso (Param_0.FooValue != null)) AndAlso (Param_0.FooValue.Two(1, 42) != null)), Convert(Param_0.FooValue.Two(1, 42).Length, Nullable`1), null)");
 #else
         lambdaExpression.ToString().Should().Be("Param_0 => IIF((((Param_0 != null) AndAlso (Param_0.FooValue != null)) AndAlso (Param_0.FooValue.Two(1, 42) != null)), Convert(Param_0.FooValue.Two(1, 42).Length), null)");
@@ -1576,7 +1910,7 @@ public class DynamicExpressionParserTests
 
         var @delegate = expression.Compile();
 
-        var result = (bool)@delegate.DynamicInvoke("This is a test  ");
+        var result = (bool)@delegate.DynamicInvoke("This is a test  ")!;
 
         // Assert
         result.Should().BeTrue();
@@ -1590,7 +1924,7 @@ public class DynamicExpressionParserTests
 
         var @delegate = expression.Compile();
 
-        var result = (bool)@delegate.DynamicInvoke("This is a test...");
+        var result = (bool)@delegate.DynamicInvoke("This is a test...")!;
 
         // Assert
         result.Should().BeTrue();
@@ -1614,7 +1948,7 @@ public class DynamicExpressionParserTests
 
         var result = Enumerable.Where(testList, del);
 
-        var expected = testList.Where(x => new string[] { "User4", "User2" }.Contains(x.UserName)).ToList();
+        var expected = testList.Where(x => new[] { "User4", "User2" }.Contains(x.UserName)).ToList();
 
         // Assert
         Check.That(result).IsNotNull();
@@ -1626,7 +1960,8 @@ public class DynamicExpressionParserTests
     public void DynamicExpressionParser_ParseLambda_Action()
     {
         // Arrange
-        var action = (Action<int>)DynamicExpressionParser.ParseLambda(typeof(Action<int>), new[] { Expression.Parameter(typeof(int), "x") }, typeof(int), "x + 1").Compile();
+        var action = (Action<int>)DynamicExpressionParser.ParseLambda(typeof(Action<int>), [Expression.Parameter(typeof(int), "x")
+        ], typeof(int), "x + 1").Compile();
 
         // Act
         action(3);
@@ -1638,10 +1973,9 @@ public class DynamicExpressionParserTests
         // Arrange
         var func = (Func<int, int>)DynamicExpressionParser.ParseLambda(
             typeof(Func<int, int>),
-            new[]
-            {
+            [
                 Expression.Parameter(typeof(int), "x")
-            },
+            ],
             typeof(int),
             "x + 1"
         ).Compile();
@@ -1673,7 +2007,7 @@ public class DynamicExpressionParserTests
         var expression = DynamicExpressionParser.ParseLambda(
             delegateType,
             new ParsingConfig(),
-            new[] { valueParameter },
+            [valueParameter],
             typeof(bool),
             test
         );
@@ -1704,7 +2038,7 @@ public class DynamicExpressionParserTests
 
         var type = DynamicClassFactory.CreateType(props);
 
-        var dynamicClass = (DynamicClass)Activator.CreateInstance(type);
+        var dynamicClass = (DynamicClass)Activator.CreateInstance(type)!;
         dynamicClass.SetDynamicPropertyValue(field.Name, field.Value);
 
         // Act 1
@@ -1713,7 +2047,7 @@ public class DynamicExpressionParserTests
 
         var @delegate = expression.Compile();
 
-        var result = (bool)@delegate.DynamicInvoke(dynamicClass);
+        var result = (bool)@delegate.DynamicInvoke(dynamicClass)!;
 
         // Assert 1
         result.Should().BeTrue();
@@ -1743,7 +2077,7 @@ public class DynamicExpressionParserTests
         // Act
         var lambdaExpression = DynamicExpressionParser.ParseLambda(parameterExpressions.ToArray(), null, expression);
         var @delegate = lambdaExpression.Compile();
-        var result = (string)@delegate.DynamicInvoke(new object[] { strArray });
+        var result = (string)@delegate.DynamicInvoke([strArray])!;
 
         // Assert
         result.Should().Be("a,b,c");
@@ -1764,7 +2098,7 @@ public class DynamicExpressionParserTests
         // Act
         var lambdaExpression = DynamicExpressionParser.ParseLambda(parameterExpressions.ToArray(), null, expression);
         var @delegate = lambdaExpression.Compile();
-        var result = (string)@delegate.DynamicInvoke(new object[] { objectArray });
+        var result = (string?)@delegate.DynamicInvoke([objectArray]);
 
         // Assert
         result.Should().Be("1,2,3");
@@ -1785,7 +2119,7 @@ public class DynamicExpressionParserTests
         // Act
         var lambdaExpression = DynamicExpressionParser.ParseLambda(parameterExpressions.ToArray(), null, expression);
         var @delegate = lambdaExpression.Compile();
-        var result = (string)@delegate.DynamicInvoke(intArray);
+        var result = (string?)@delegate.DynamicInvoke(intArray);
 
         // Assert
         result.Should().Be("1,2,3");
@@ -1800,6 +2134,11 @@ public class DynamicExpressionParserTests
 
     public class DefaultDynamicLinqCustomTypeProviderForGenericExtensionMethod : DefaultDynamicLinqCustomTypeProvider
     {
-        public override HashSet<Type> GetCustomTypes() => new HashSet<Type>(base.GetCustomTypes()) { typeof(Methods), typeof(MethodsItemExtension) };
+        public DefaultDynamicLinqCustomTypeProviderForGenericExtensionMethod() : base(ParsingConfig.Default)
+        {
+        }
+
+        public override HashSet<Type> GetCustomTypes() =>
+            [..base.GetCustomTypes(), typeof(Methods), typeof(MethodsItemExtension)];
     }
 }

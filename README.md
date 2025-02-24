@@ -30,10 +30,12 @@ int c = 10;
 db.Customers.WhereInterpolated($"City == {cityName} and Orders.Count >= {c}");
 ```
 
+---
+
 ## :exclamation: Breaking changes
 
 ### v1.3.0
-A breaking change is introduced in version 1.3.0 which is related to calling methods on classes.
+A breaking change is introduced in this version which is related to calling methods on classes.
 Due to security reasons, it's now only allowed to call methods on the standard predefined classes like (`bool`, `int`, `string` ...).
 If you want to call a method on an own custom class, annotate that class with the [DynamicLinqType](https://dynamic-linq.net/advanced-extending#dynamiclinqtype-attribute).
 Example:
@@ -44,11 +46,29 @@ public class MyCustomClass
     public int GetAge(int x) => x;
 }
 ```
+If it's not possible to add that attribute, you need to implement a custom [CustomTypeProvider](https://dynamic-linq.net/advanced-configuration#customtypeprovider) and set this to the `ParsingConfig` and provide that config to all dynamic calls.
+Or provide a list of additional types in the [DefaultDynamicLinqCustomTypeProvider.cs](https://github.com/zzzprojects/System.Linq.Dynamic.Core/blob/master/src/System.Linq.Dynamic.Core/CustomTypeProviders/DefaultDynamicLinqCustomTypeProvider.cs).
 
-If it's not possible to add that attribute, you need to implement a custom [CustomTypeProvider](https://dynamic-linq.net/advanced-configuration#customtypeprovider) and set this to the `ParsingConfig` and provide that config to the dynamic call.
+### v1.6.0
+#### Change 1
+It's not allowed anymore to call any methods on the `object` type. By default also the `ToString` and `Equals` methods are not allowed.
+This is done to mitigate the risk of calling methods on the `object` type which could lead to security issues (CVE-2024-51417).
+To allow these methods set `AllowEqualsAndToStringMethodsOnObject` to `true` in the `ParsingConfig` and provide that config to all dynamic calls.
+
+#### Change 2
+By default the `RestrictOrderByToPropertyOrField` is now set to `true` in the `ParsingConfig`. 
+Which means that only properties and fields can be used in the `OrderBy` / `ThenBy`.
+This is done to mitigate the risk of calling methods or other expressions in the `OrderBy` / `ThenBy` which could lead to security issues.
+To allow these methods set `RestrictOrderByToPropertyOrField` to `false` in the `ParsingConfig` and provide that config to all dynamic calls.
+
+#### Change 3
+The `DefaultDynamicLinqCustomTypeProvider` has been changed to only return types which have the `[DynamicLinqType]` attribute applied.
+If it's not possible to add that attribute, you need to implement a custom [CustomTypeProvider](https://dynamic-linq.net/advanced-configuration#customtypeprovider) and set this to the `ParsingConfig` and provide that config to all dynamic calls.
+Or provide a list of additional types in the [DefaultDynamicLinqCustomTypeProvider.cs](https://github.com/zzzprojects/System.Linq.Dynamic.Core/blob/master/src/System.Linq.Dynamic.Core/CustomTypeProviders/DefaultDynamicLinqCustomTypeProvider.cs).
+
+---
 
 ## Useful links
-
 - [Website](https://dynamic-linq.net)
 - [Documentation](https://dynamic-linq.net/overview)
 - [Online examples](https://dynamic-linq.net/online-examples)
@@ -63,12 +83,15 @@ If it's not possible to add that attribute, you need to implement a custom [Cust
 | | |
 | ***Quality*** | &nbsp; |
 | &nbsp;&nbsp;**CI Workflow** | ![CI Workflow](https://github.com/zzzprojects/System.Linq.Dynamic.Core/actions/workflows/ci.yml/badge.svg) |
+| &nbsp;&nbsp;**SonarCloud** | [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=zzzprojects_System.Linq.Dynamic.Core&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=zzzprojects_System.Linq.Dynamic.Core) |
 | |
 | ***NuGet*** | &nbsp; |
-| &nbsp;&nbsp;**System.Linq.Dynamic.Core** | [![NuGet](https://buildstats.info/nuget/System.Linq.Dynamic.Core)](https://www.nuget.org/packages/System.Linq.Dynamic.Core) |
-| &nbsp;&nbsp;**EntityFramework.DynamicLinq** | [![NuGet](https://buildstats.info/nuget/EntityFramework.DynamicLinq)](https://www.nuget.org/packages/EntityFramework.DynamicLinq) |
-| &nbsp;&nbsp;**Microsoft.EntityFrameworkCore.DynamicLinq** | [![NuGet](https://buildstats.info/nuget/Microsoft.EntityFrameworkCore.DynamicLinq)](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore.DynamicLinq) |
-| &nbsp;&nbsp;**Z.EntityFramework.Classic.DynamicLinq** | [![NuGet](https://buildstats.info/nuget/Z.EntityFramework.Classic.DynamicLinq)](https://www.nuget.org/packages/Z.EntityFramework.Classic.DynamicLinq) |
+| &nbsp;&nbsp;**System.Linq.Dynamic.Core** | [![NuGet](https://img.shields.io/nuget/v/System.Linq.Dynamic.Core)](https://www.nuget.org/packages/System.Linq.Dynamic.Core) |
+| &nbsp;&nbsp;**EntityFramework.DynamicLinq** | [![NuGet](https://img.shields.io/nuget/v/EntityFramework.DynamicLinq)](https://www.nuget.org/packages/EntityFramework.DynamicLinq) |
+| &nbsp;&nbsp;**Microsoft.EntityFrameworkCore.DynamicLinq** | [![NuGet](https://img.shields.io/nuget/v/Microsoft.EntityFrameworkCore.DynamicLinq)](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore.DynamicLinq) |
+| &nbsp;&nbsp;**Z.EntityFramework.Classic.DynamicLinq** | [![NuGet](https://img.shields.io/nuget/v/Z.EntityFramework.Classic.DynamicLinq)](https://www.nuget.org/packages/Z.EntityFramework.Classic.DynamicLinq) |
+| &nbsp;&nbsp;**Z.DynamicLinq.SystemTextJson** | [![NuGet](https://img.shields.io/nuget/v/Z.DynamicLinq.SystemTextJson)](https://www.nuget.org/packages/Z.DynamicLinq.SystemTextJson) |
+| &nbsp;&nbsp;**Z.DynamicLinq.NewtonsoftJson** | [![NuGet](https://img.shields.io/nuget/v/Z.DynamicLinq.NewtonsoftJson)](https://www.nuget.org/packages/Z.DynamicLinq.NewtonsoftJson) |
 
 ## Development Details
 
@@ -76,14 +99,14 @@ If it's not possible to add that attribute, you need to implement a custom [Cust
 The following frameworks are supported:
 - net35, net40, net45, net46 and up
 - netstandard1.3, netstandard2.0 and netstandard2.1
-- netcoreapp3.1, net5.0, net6.0, net7.0 and net8.0
+- netcoreapp3.1, net5.0, net6.0, net7.0, net8.0 and net9.0
 - uap10.0
 
 ### Fork details
-This fork takes the basic library to a new level. Contains XML Documentation and examples on how to use it. Also adds unit testing to help ensure that it works properly.
+This fork takes the basic library to a new level. Also adds unit tests to help ensure that it works properly.
 
 Some background:
-I forked from https://github.com/NArnott/System.Linq.Dynamic and added some more functionality there.<br>My fork is still visible on github [https://github.com/StefH/System.Linq.Dynamic], however I decided to start a new project + nuget to avoid confusion and create the project according to the new VS2017 + .NET Core rules / standards.
+I forked from https://github.com/NArnott/System.Linq.Dynamic and added some more functionality there.<br>My fork is still visible on github [https://github.com/StefH/System.Linq.Dynamic], however I decided to start a new project + NuGet to avoid confusion and create the project according to the new VS2017 + .NET Core rules / standards.
 
 However, currently there are multiple nuget packages and projects available:
 
@@ -109,35 +132,28 @@ However, currently there are multiple nuget packages and projects available:
 
 ## Contribute
 
-Want to help us? Your donation directly helps us maintain and grow ZZZ Free Projects. 
+The best way to contribute is by **spreading the word** about the library:
 
-We can't thank you enough for your support 🙏.
-
-👍 [One-time donation](https://zzzprojects.com/contribute)
-
-❤️ [Become a sponsor](https://github.com/sponsors/zzzprojects) 
-
-### Why should I contribute to this free & open-source library?
-We all love free and open-source libraries! But there is a catch... nothing is free in this world.
-
-We NEED your help. Last year alone, we spent over **3000 hours** maintaining all our open source libraries.
-
-Contributions allow us to spend more of our time on: Bug Fix, Development, Documentation, and Support.
-
-### How much should I contribute?
-Any amount is much appreciated. All our free libraries together have more than **100 million** downloads.
-
-If everyone could contribute a tiny amount, it would help us make the .NET community a better place to code!
-
-Another great free way to contribute is  **spreading the word** about the library.
-
-A **HUGE THANKS** for your help!
+ - Blog it
+ - Comment it
+ - Star it
+ - Share it
+ 
+A **HUGE THANKS** for your help.
 
 ## More Projects
 
-- [EntityFramework Extensions](https://entityframework-extensions.net/)
-- [Dapper Plus](https://dapper-plus.net/)
-- [C# Eval Expression](https://eval-expression.net/)
-- and much more! 
+- Projects:
+   - [EntityFramework Extensions](https://entityframework-extensions.net/)
+   - [Dapper Plus](https://dapper-plus.net/)
+   - [C# Eval Expression](https://eval-expression.net/)
+- Learn Websites
+   - [Learn EF Core](https://www.learnentityframeworkcore.com/)
+   - [Learn Dapper](https://www.learndapper.com/)
+- Online Tools:
+   - [.NET Fiddle](https://dotnetfiddle.net/)
+   - [SQL Fiddle](https://sqlfiddle.com/)
+   - [ZZZ Code AI](https://zzzcode.ai/)
+- and much more!
 
-To view all our free and paid projects, visit our [website](https://zzzprojects.com/).
+To view all our free and paid projects, visit our website [ZZZ Projects](https://zzzprojects.com/).

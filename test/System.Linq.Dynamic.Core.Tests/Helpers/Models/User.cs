@@ -4,7 +4,15 @@ namespace System.Linq.Dynamic.Core.Tests.Helpers.Models;
 
 public class User
 {
+    public bool UserInfo { get; set; }
+
     public Guid Id { get; set; }
+
+    public Guid? ParentId { get; set; }
+
+    public Guid? LegalPersonId { get; set; }
+
+    public Guid? PointSiteTD { get; set; }
 
     public SnowflakeId SnowflakeId { get; set; }
 
@@ -16,9 +24,13 @@ public class User
 
     public int? NullableInt { get; set; }
 
+    public string? NullableString { get; set; }
+
     public int Income { get; set; }
 
-    public UserProfile Profile { get; set; }
+    public char C { get; set; }
+
+    public UserProfile? Profile { get; set; }
 
     public UserState State { get; set; }
 

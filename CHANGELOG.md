@@ -1,3 +1,137 @@
+# v1.6.0.2 (11 February 2025)
+- [#896](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/896) - Fix AbstractDynamicLinqCustomTypeProvider.ResolveTypeBySimpleName to use AdditionalTypes [bug] contributed by [StefH](https://github.com/StefH)
+
+# v1.6.0.1 (28 January 2025)
+- [#887](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/887) - Make TextParser public [feature] contributed by [StefH](https://github.com/StefH)
+- [#885](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/885) - Make the TextParser public again [feature]
+
+# v1.6.0 (26 January 2025)
+- [#864](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/864) - Use ParsingConfig.IsCaseSensitive setting in TextParser and KeywordsHelper [feature] contributed by [StefH](https://github.com/StefH)
+- [#865](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/865) - Add OrderBy NullPropagation tests [test] contributed by [StefH](https://github.com/StefH)
+- [#866](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/866) - Refactor KeywordsHelper, TypeFinder and update comments on ParsingConfig [refactor] contributed by [StefH](https://github.com/StefH)
+- [#870](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/870) - Fix CVE-2024-51417 [bug] contributed by [StefH](https://github.com/StefH)
+- [#874](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/874) - Fix calling static properties or fields in non-static class [bug] contributed by [StefH](https://github.com/StefH)
+- [#875](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/875) - Add option to ParsingConfig to allow the Equals and ToString methods on object [feature] contributed by [StefH](https://github.com/StefH)
+- [#876](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/876) - Update and Fix SecurityTests [test] contributed by [mariusz96](https://github.com/mariusz96)
+- [#879](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/879) - Change internal usage from obsolete IDynamicLinkCustomTypeProvider to IDynamicLinqCustomTypeProvider [feature] contributed by [StefH](https://github.com/StefH)
+- [#882](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/882) - ExpressionParser: add 2nd ctor with an extra non-optional parameter [feature] contributed by [StefH](https://github.com/StefH)
+- [#883](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/883) - Fix the usage of ParsingConfig in some methods in the DynamicQueryableExtensions class [bug] contributed by [StefH](https://github.com/StefH)
+- [#884](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/884) - By default the RestrictOrderByToPropertyOrField is now set to true in the ParsingConfig [feature] contributed by [StefH](https://github.com/StefH)
+- [#773](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/773) - Parse exceptions with (nested) static classes [bug]
+- [#867](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/867) - CVE-2024-51417: System.Linq.Dynamic.Core allows remote access to properties on reflection types and static properties/fields [bug]
+- [#873](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/873) - Accessing static property or field in normal class does not work [bug]
+- [#878](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/878) - ParsingConfig change Type of CustomTypeProvider to IDynamicLinqCustomTypeProvider in Version 1.6.0-preview-01 [feature]
+- [#881](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/881) - ExpressionParser ctor in 1.5.0 not compatible with earlier versions [feature]
+
+# v1.5.1 (14 December 2024)
+- [#859](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/859) - Add SelectMany extension method for Json [feature] contributed by [StefH](https://github.com/StefH)
+- [#860](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/860) - Add support for SequenceEqual [feature] contributed by [StefH](https://github.com/StefH)
+- [#861](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/861) - Fix calling Sum without any arguments [bug] contributed by [StefH](https://github.com/StefH)
+- [#862](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/862) - Use different PackageIds for SystemTextJson and NewtonsoftJson projects [feature] contributed by [StefH](https://github.com/StefH)
+- [#855](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/855) - Support for SequenceEqual [feature]
+- [#856](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/856) - Using Sum method without arguments throws exception [bug]
+- [#858](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/858) - SelectMany not work over JSON [bug]
+
+# v1.5.0 (07 December 2024)
+- [#791](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/791) - Add Json support [feature] contributed by [StefH](https://github.com/StefH)
+- [#857](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/857) - RestrictOrderByToPropertyOrField [feature] contributed by [StefH](https://github.com/StefH)
+- [#789](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/789) - Add JSON support [feature]
+
+# v1.4.9 (16 November 2024)
+- [#853](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/853) - Add .NET 9 contributed by [StefH](https://github.com/StefH)
+
+# v1.4.8 (31 October 2024)
+- [#851](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/851) - Throw ArgumentException when expression has invalid compare (e.g. string with int) [bug] contributed by [StefH](https://github.com/StefH)
+- [#849](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/849) - 1.4.7 Regression -- NullReferenceException from invalid expression instead of ArgumentException [bug]
+
+# v1.4.7 (26 October 2024)
+- [#847](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/847) - Fixed String.Concat when types differ [bug] contributed by [StefH](https://github.com/StefH)
+- [#845](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/845) - String concatenations fails with System.ArgumentException during parsing [bug]
+
+# v1.4.6 (13 October 2024)
+- [#839](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/839) - Add some [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] annotations [bug] contributed by [StefH](https://github.com/StefH)
+- [#844](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/844) - Fixed calling String methods in a nested expression [bug] contributed by [StefH](https://github.com/StefH)
+- [#843](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/843) - Calling methods on a String in nested expressesion causes Exception [bug]
+
+# v1.4.5 (20 August 2024)
+- [#838](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/838) - Fix Blazor WASM System.InvalidOperationException [bug] contributed by [StefH](https://github.com/StefH)
+- [#836](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/836) - Blazor Wasm Eval: System.InvalidOperationException: Operation is not valid due to the current state of the object. [bug]
+
+# v1.4.4 (30 July 2024)
+- [#832](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/832) - Fixed Extension methods on a string [bug] contributed by [StefH](https://github.com/StefH)
+- [#833](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/833) - Update DefaultDynamicLinqCustomTypeProvider constructor to be compatible with microsoft/RulesEngine [feature] contributed by [StefH](https://github.com/StefH)
+- [#830](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/830) - DefaultDynamicLinqCustomTypeProvider Issue [bug]
+- [#831](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/831) - Unable to find my string extensions in static class with DynamicLinqType attribute [bug]
+
+# v1.4.3 (01 July 2024)
+- [#788](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/788) - Fix parsing &quot; [bug] contributed by [StefH](https://github.com/StefH)
+- [#805](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/805) - Update ComparisonOperator logic to support comparing to object [feature] contributed by [StefH](https://github.com/StefH)
+- [#451](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/451) - Cannot compare 'Object' type [feature]
+- [#786](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/786) - Parser interpreting the two consecutive escape sequences \&quot;\&quot; as a single escape sequence [bug]
+
+# v1.4.2 (25 June 2024)
+- [#824](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/824) - Fixed: Incorrect Handling of Qualifiers in ConstantExpressionHelper contributed by [RenanCarlosPereira](https://github.com/RenanCarlosPereira)
+- [#821](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/821) - Incorrect Handling of Qualifiers in ConstantExpressionHelper [bug]
+
+# v1.4.1 (21 June 2024)
+- [#819](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/819) - Update EntityFramework to version 6.5 to fix CVE [feature] contributed by [StefH](https://github.com/StefH)
+- [#820](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/820) - Use Testcontainers.MsSql for unit tests [test] contributed by [StefH](https://github.com/StefH)
+
+# v1.4.0 (31 May 2024)
+- [#807](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/807) - PredefinedTypesHelper: Fix loading types from System.Data.Entity and EntityFramework [bug] contributed by [StefH](https://github.com/StefH)
+- [#790](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/790) - .NET 8 (and possible all non-NETSTANDARD and higher versions) attempt to load EF 6 types [bug]
+- [#812](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/812) - &gt;= 1.3.3 Slow First Dynamic Select
+
+# v1.3.14 (03 May 2024)
+- [#804](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/804) - Fix calling methods on a constant string [bug] contributed by [StefH](https://github.com/StefH)
+- [#806](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/806) - Support implicit boolean operator for logical operations (And, Or) [feature] contributed by [StefH](https://github.com/StefH)
+- [#808](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/808) - Fix calling Average without any arguments [bug] contributed by [StefH](https://github.com/StefH)
+- [#809](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/809) - Add unit test: Where_Dynamic_ConcatString [test] contributed by [StefH](https://github.com/StefH)
+- [#811](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/811) - Add extra unit test for calling methods on a string property [test] contributed by [StefH](https://github.com/StefH)
+- [#626](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/626) - '&amp;&amp;' and '||' operators incompatible between operand type 'bool' and type with implicit conversation to 'bool' [bug]
+- [#633](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/633) - Fail to GroupBy Select Where Average [bug]
+- [#803](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/803) - Updating to 1.3.13 - No property or field 'XXXXX' exists in type 'Char' [bug]
+- [#810](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/810) - Issue with Where() method when filtering multiple string properties while using ToLower() [bug]
+
+# v1.3.13 (25 April 2024)
+- [#802](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/802) - Fix DynamicExpressionParser for IQueryable [bug] contributed by [StefH](https://github.com/StefH)
+- [#801](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/801) - ExpressionParser finds Types from IEnumerable instead of IQueryable (breaks Code) (worked in 1.3.9) [bug]
+
+# v1.3.12 (18 April 2024)
+- [#800](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/800) - Fix String.Equals together with other condition [bug] contributed by [StefH](https://github.com/StefH)
+- [#799](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/799) - Error with 'Equals' together with other parameters [bug]
+
+# v1.3.11 (17 April 2024)
+- [#785](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/785) - Add CodeFirst examples for .NET 6 and 8 [test] contributed by [StefH](https://github.com/StefH)
+- [#795](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/795) - Fix Aggregate methods Average and Sum [bug] contributed by [StefH](https://github.com/StefH)
+- [#796](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/796) - Fixed ParseArgumentList when using lambda filter on list of dictionaries [bug] contributed by [StefH](https://github.com/StefH)
+- [#798](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/798) - Fix when using LINQ methods like &quot;Any&quot; on a string [bug] contributed by [StefH](https://github.com/StefH)
+- [#415](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/415) - Problem with Query over JObject, Filter with SubProperty not returning the correct value [bug]
+- [#440](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/440) - `it` isn't interpreted as the inner parameter when using `All` or `Any` [bug]
+- [#793](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/793) - Failure in ParseArgumentList when using lambda filter on list of dictionaries [bug]
+- [#794](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/794) - DynamicExpressionParser.ParseLambda regressions in v1.3.10 [bug]
+
+# v1.3.10 (03 March 2024)
+- [#774](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/774) - Fixed calling property on nested static class [bug] contributed by [StefH](https://github.com/StefH)
+- [#777](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/777) - Keep original type from subquery [bug] contributed by [StefH](https://github.com/StefH)
+- [#772](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/772) - Static helper class with name as property doesn't work after updating from v.1.0.8.18 to 1.3.8 [bug]
+- [#775](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/775) - Value typed property from subquery are casted as `object` [bug]
+- [#779](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/779) - try to call function inside select [bug]
+
+# v1.3.9 (29 February 2024)
+- [#761](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/761) - Add unit tests for Any [test] contributed by [StefH](https://github.com/StefH)
+- [#765](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/765) - Introduce Sliding Cache to Constant Expression Helper [feature] contributed by [TWhidden](https://github.com/TWhidden)
+- [#770](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/770) - Enhancements to SlidingCache&lt;&gt; for Improved Thread Safety and Performance [feature] contributed by [TWhidden](https://github.com/TWhidden)
+- [#780](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/780) - Add RadzenDataGrid.BlazorApp example [test] contributed by [StefH](https://github.com/StefH)
+- [#764](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/764) - Possible Memory Leak with ConstantExpressionHelper [bug]
+- [#769](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/769) - Enhancements to SlidingCache&lt;&gt; for Improved Thread Safety and Performance [bug]
+
+# v1.3.8 (20 January 2024)
+- [#758](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/758) - Update function argument parsing for strings [bug] contributed by [StefH](https://github.com/StefH)
+- [#760](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/760) - Update function argument parsing for strings (part 2) [bug] contributed by [StefH](https://github.com/StefH)
+- [#757](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/757) - ParseException after update from v.1.0.8.18 to 1.0.9.0 or any newer (till 1.3.7) [bug]
+- [#759](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/759) - Still yet ParseException after update from v.1.0.8.18 to 1.0.9.0 or any newer (till 1.3.7) [bug]
+
 # v1.3.7 (20 November 2023)
 - [#756](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/756) - Add support for .NET 8 + Microsoft.EntityFrameworkCore 8 [feature] contributed by [StefH](https://github.com/StefH)
 
@@ -56,7 +190,6 @@
 - [#669](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/669) - Methods should only be callable on predefined types [security] contributed by [StefH](https://github.com/StefH)
 - [#671](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/671) - Add support for DateOnly and TimeOnly [feature] contributed by [StefH](https://github.com/StefH)
 - [#672](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/672) - Fixed ExpressionParser when WrappedValue-string is used for equals-operator for Enum [bug] contributed by [StefH](https://github.com/StefH)
-- [#674](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/674) - Fixed ExpressionParser when WrappedValue-string is used for equals-operator for Enum [refactor] contributed by [neilbgr](https://github.com/neilbgr)
 - [#676](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/676) - Change default setting for PrioritizePropertyOrFieldOverTheType to 'true'. [bug] contributed by [StefH](https://github.com/StefH)
 - [#660](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/660) - Question about security [security]
 - [#667](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/667) - DateOnly support [feature]
@@ -196,12 +329,10 @@
 - [#455](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/455) - Ensure action delegate allows call to void methods contributed by [glopesdev](https://github.com/glopesdev)
 - [#480](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/480) - Fix DynamicIndex implementation [bug] contributed by [StefH](https://github.com/StefH)
 - [#481](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/481) - Xamarin fix Enum [bug] contributed by [StefH](https://github.com/StefH)
-- [#484](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/484) - Implement support for anonymous types as dynamic objects [bug] contributed by [hazzik](https://github.com/hazzik)
 - [#448](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/448) - Dynamic.DynamicIndex is exposed in the expression [bug]
 - [#479](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/479) - Xamarin.Forms - DynamicExpressionParser.ParseLambda fails when comparing enum properties by their int value [bug]
 
 # v1.2.7 (26 December 2020)
-- [#462](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/462) - Add PatchVersion [feature] contributed by [StefH](https://github.com/StefH)
 - [#463](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/463) - Add extension method Where&lt;TSource&gt;(...) with LambdaExpression  [feature] contributed by [StefH](https://github.com/StefH)
 - [#464](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/464) - NullPropagation operator: support nullable DateTime contributed by [StefH](https://github.com/StefH)
 - [#466](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/466) - Fix Android issue (Could not load the file 'System.Private.Corelib') [bug] contributed by [StefH](https://github.com/StefH)
@@ -213,13 +344,14 @@
 - [#468](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/468) - net5.0 OrderBy problem [bug]
 - [#473](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/473) - Exception in System.Linq.Dynamic.Core.Parser.EnumerationsFromMscorlib after update to 1.2.6 [bug]
 
-# v1.2.6 (22 November 2020)
+# v1.2.6 (23 November 2020)
 - [#443](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/443) - Fix MethodCallExpression when using NullPropagating (np) contributed by [StefH](https://github.com/StefH)
 - [#445](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/445) - Add GitHub action for ci build + unit tests contributed by [StefH](https://github.com/StefH)
 - [#446](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/446) - Remove MyGet links from Readme.md contributed by [StefH](https://github.com/StefH)
 - [#447](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/447) - Fix Unit tests for net452 and net461 contributed by [StefH](https://github.com/StefH)
 - [#449](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/449) - Fix DateTime constructor using ticks [bug] contributed by [StefH](https://github.com/StefH)
 - [#450](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/450) - Support the enum UriKind [feature] contributed by [StefH](https://github.com/StefH)
+- [#462](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/462) - Add PatchVersion [feature] contributed by [StefH](https://github.com/StefH)
 - [#284](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/284) - String(Null) raises Ambiguous error [bug]
 - [#432](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/432) - Clarify error message when using np with instance methods [bug]
 - [#439](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/439) - Question: DateTime constructor using ticks [bug]
@@ -376,9 +508,6 @@
 # 1.0.11.0 (28 February 2019)
 - [#249](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/249) - Add support for OfType, Is, As and Cast [feature] contributed by [StefH](https://github.com/StefH)
 - [#250](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/250) - Wrap all constant expressions to fix Parameterized SQL (#247) [bug, feature] contributed by [StefH](https://github.com/StefH)
-- [#251](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/251) - Add NetCoreApp target &amp; include DefaultDynamicLinqCustomTypeProvider [feature] contributed by [StefH](https://github.com/StefH)
-- [#253](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/253) - OfType Function contributed by [StefH](https://github.com/StefH)
-- [#254](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/254) - Resolve types by simple name #252 [feature] contributed by [StefH](https://github.com/StefH)
 - [#255](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/255) - Fix SonarScanner in build [bug] contributed by [StefH](https://github.com/StefH)
 - [#247](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/247) - Parameterized SQL doesn't work for Contains, StartsWith, and EndsWith 
 - [#248](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/248) - Add IQueryable.OfType support to ExpressionParser.
@@ -411,24 +540,19 @@
 - [#237](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/237) - Performance Fix [bug] contributed by [StefH](https://github.com/StefH)
 - [#71](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/71) - Issue: Increase code-coverage [feature]
 - [#119](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/119) - Feature: How to keep parameter input name of query [feature]
-- [#145](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/145) - Question : Performance and 'System.IO.FileNotFoundException' in System.Private.CoreLib.dll
 - [#152](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/152) - Multiple assemblies with equivalent identity have been imported
 - [#179](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/179) - Feature: Implement SourceLink
 - [#184](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/184) - Feature: Generate Parameterized SQL [feature]
 - [#204](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/204) - Cannot GroupJoin when source is Linq-To-Entities
 - [#209](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/209) - Feature: use Azure Pipelines for building
 - [#215](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/215) - Issue: DynamicClassFactory fails to create dynamic type without properties [bug]
-- [#234](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/234) - Does this support Json data
-- [#236](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/236) - Massive performance hit when upgrading from 1.0.8.18 to 1.0.9
+- [#236](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/236) - Massive performance hit when upgrading from 1.0.8.18 to 1.0.9 [bug]
 
 # 1.0.9.0 (19 October 2018)
 - [#208](https://github.com/zzzprojects/System.Linq.Dynamic.Core/pull/208) - Fix New() support for Type + Fix GroupJoin() not working when using Linq-To-Entities (2) contributed by [StefH](https://github.com/StefH)
 - [#136](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/136) - Expressions on dynamic objects
-- [#147](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/147) - Question: Making some queries dynamic possible
 - [#173](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/173) - Error when trying to access an object declared on another lambda
-- [#181](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/181) - Question: QueryValidator
 - [#199](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/199) - Feature: Add EvaluateGroupByAtDatabase logic to Join and GroupJoin
-- [#203](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/203) - How to query complex entities
 - [#205](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/205) - Documentation of supported operations
 - [#206](https://github.com/zzzprojects/System.Linq.Dynamic.Core/issues/206) - Issue: new() expression cannot handle complex types
 

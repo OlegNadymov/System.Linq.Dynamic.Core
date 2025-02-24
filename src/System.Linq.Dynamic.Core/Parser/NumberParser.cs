@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Linq.Dynamic.Core.Exceptions;
 using System.Linq.Dynamic.Core.Validation;
 using System.Linq.Expressions;
@@ -16,6 +16,7 @@ namespace System.Linq.Dynamic.Core.Parser
         private static readonly char[] Qualifiers = { 'U', 'u', 'L', 'l', 'F', 'f', 'D', 'd', 'M', 'm' };
         private static readonly char[] QualifiersHex = { 'U', 'u', 'L', 'l' };
         private static readonly string[] QualifiersReal = { "F", "f", "D", "d", "M", "m" };
+        private readonly ConstantExpressionHelper _constantExpressionHelper;
 
         private readonly CultureInfo _culture;
 
@@ -26,6 +27,7 @@ namespace System.Linq.Dynamic.Core.Parser
         public NumberParser(ParsingConfig? config)
         {
             _culture = config?.NumberParseCulture ?? CultureInfo.InvariantCulture;
+            _constantExpressionHelper = ConstantExpressionHelperFactory.GetInstance(config ?? ParsingConfig.Default);
         }
 
         /// <summary>
@@ -77,12 +79,12 @@ namespace System.Linq.Dynamic.Core.Parser
                 {
                     if (qualifier == "U" || qualifier == "u")
                     {
-                        return ConstantExpressionHelper.CreateLiteral((uint)unsignedValue, text);
+                        return _constantExpressionHelper.CreateLiteral((uint)unsignedValue, text);
                     }
 
                     if (qualifier == "L" || qualifier == "l")
                     {
-                        return ConstantExpressionHelper.CreateLiteral((long)unsignedValue, text);
+                        return _constantExpressionHelper.CreateLiteral((long)unsignedValue, text);
                     }
 
                     if (QualifiersReal.Contains(qualifier))
@@ -90,25 +92,25 @@ namespace System.Linq.Dynamic.Core.Parser
                         return ParseRealLiteral(text, qualifier[0], false);
                     }
 
-                    return ConstantExpressionHelper.CreateLiteral(unsignedValue, text);
+                    return _constantExpressionHelper.CreateLiteral(unsignedValue, text);
                 }
 
                 if (unsignedValue <= int.MaxValue)
                 {
-                    return ConstantExpressionHelper.CreateLiteral((int)unsignedValue, text);
+                    return _constantExpressionHelper.CreateLiteral((int)unsignedValue, text);
                 }
 
                 if (unsignedValue <= uint.MaxValue)
                 {
-                    return ConstantExpressionHelper.CreateLiteral((uint)unsignedValue, text);
+                    return _constantExpressionHelper.CreateLiteral((uint)unsignedValue, text);
                 }
 
                 if (unsignedValue <= long.MaxValue)
                 {
-                    return ConstantExpressionHelper.CreateLiteral((long)unsignedValue, text);
+                    return _constantExpressionHelper.CreateLiteral((long)unsignedValue, text);
                 }
 
-                return ConstantExpressionHelper.CreateLiteral(unsignedValue, text);
+                return _constantExpressionHelper.CreateLiteral(unsignedValue, text);
             }
 
             if (isHexadecimal || isBinary)
@@ -135,7 +137,7 @@ namespace System.Linq.Dynamic.Core.Parser
             {
                 if (qualifier == "L" || qualifier == "l")
                 {
-                    return ConstantExpressionHelper.CreateLiteral(value, text);
+                    return _constantExpressionHelper.CreateLiteral(value, text);
                 }
 
                 if (QualifiersReal.Contains(qualifier))
@@ -148,10 +150,10 @@ namespace System.Linq.Dynamic.Core.Parser
 
             if (value <= int.MaxValue)
             {
-                return ConstantExpressionHelper.CreateLiteral((int)value, text);
+                return _constantExpressionHelper.CreateLiteral((int)value, text);
             }
 
-            return ConstantExpressionHelper.CreateLiteral(value, text);
+            return _constantExpressionHelper.CreateLiteral(value, text);
         }
 
         /// <summary>
@@ -159,22 +161,37 @@ namespace System.Linq.Dynamic.Core.Parser
         /// </summary>
         public Expression ParseRealLiteral(string text, char qualifier, bool stripQualifier)
         {
+            if (stripQualifier)
+            {
+                var pos = text.Length - 1;
+                while (pos >= 0 && Qualifiers.Contains(text[pos]))
+                {
+                    pos--;
+                }
+
+                if (pos < text.Length - 1)
+                {
+                    qualifier = text[pos + 1];
+                    text = text.Substring(0, pos + 1);
+                }
+            }
+
             switch (qualifier)
             {
                 case 'f':
                 case 'F':
-                    return ConstantExpressionHelper.CreateLiteral(ParseNumber(stripQualifier ? text.Substring(0, text.Length - 1) : text, typeof(float))!, text);
+                    return _constantExpressionHelper.CreateLiteral(ParseNumber(text, typeof(float))!, text);
 
                 case 'm':
                 case 'M':
-                    return ConstantExpressionHelper.CreateLiteral(ParseNumber(stripQualifier ? text.Substring(0, text.Length - 1) : text, typeof(decimal))!, text);
+                    return _constantExpressionHelper.CreateLiteral(ParseNumber(text, typeof(decimal))!, text);
 
                 case 'd':
                 case 'D':
-                    return ConstantExpressionHelper.CreateLiteral(ParseNumber(stripQualifier ? text.Substring(0, text.Length - 1) : text, typeof(double))!, text);
+                    return _constantExpressionHelper.CreateLiteral(ParseNumber(text, typeof(double))!, text);
 
                 default:
-                    return ConstantExpressionHelper.CreateLiteral(ParseNumber(text, typeof(double))!, text);
+                    return _constantExpressionHelper.CreateLiteral(ParseNumber(text, typeof(double))!, text);
             }
         }
 
@@ -199,7 +216,7 @@ namespace System.Linq.Dynamic.Core.Parser
         {
             try
             {
-#if !(NETFX_CORE || WINDOWS_APP || UAP10_0 || NETSTANDARD)
+#if !(UAP10_0 || NETSTANDARD)
                 switch (Type.GetTypeCode(TypeHelper.GetNonNullableType(type)))
                 {
                     case TypeCode.SByte:
@@ -285,12 +302,12 @@ namespace System.Linq.Dynamic.Core.Parser
         {
             if (RegexBinary32.IsMatch(text))
             {
-                return ConstantExpressionHelper.CreateLiteral((isNegative ? -1 : 1) * Convert.ToInt32(text, 2), text);
+                return _constantExpressionHelper.CreateLiteral((isNegative ? -1 : 1) * Convert.ToInt32(text, 2), text);
             }
 
             if (RegexBinary64.IsMatch(text))
             {
-                return ConstantExpressionHelper.CreateLiteral((isNegative ? -1 : 1) * Convert.ToInt64(text, 2), text);
+                return _constantExpressionHelper.CreateLiteral((isNegative ? -1 : 1) * Convert.ToInt64(text, 2), text);
             }
 
             throw new ParseException(string.Format(_culture, Res.InvalidBinaryIntegerLiteral, text), tokenPosition);

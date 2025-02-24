@@ -1,77 +1,92 @@
-﻿using System.Collections;
-using System.Linq.Dynamic.Core.Tests.Helpers.Entities;
+﻿using System.Linq.Dynamic.Core.Tests.Helpers.Entities;
+using Xunit;
+
 #if EFCORE
 using Microsoft.EntityFrameworkCore;
 #else
 using System.Data.Entity;
 #endif
-using Xunit;
 
-namespace System.Linq.Dynamic.Core.Tests
+namespace System.Linq.Dynamic.Core.Tests;
+
+public partial class EntitiesTests : IClassFixture<EntitiesTestsDatabaseFixture>
 {
-    public partial class EntitiesTests : IDisposable
+    private static readonly Random Rnd = new Random(1);
+
+    private readonly BlogContext _context;
+
+    public EntitiesTests(EntitiesTestsDatabaseFixture fixture)
     {
-        BlogContext _context;
-
-        static readonly Random Rnd = new Random(1);
-
-        public EntitiesTests()
-        {
 #if EFCORE
-            var builder = new DbContextOptionsBuilder();
-            // builder.UseSqlite($"Filename=System.Linq.Dynamic.Core.{Guid.NewGuid()}.db");
+        var builder = new DbContextOptionsBuilder();
+        if (fixture.UseInMemory)
+        {
             builder.UseInMemoryDatabase($"System.Linq.Dynamic.Core.{Guid.NewGuid()}");
-            //builder.UseSqlServer($"Server=(localdb)\\MSSQLLocalDB;Integrated Security=true;AttachDbFileName=.\\System.Linq.Dynamic.Core.{Guid.NewGuid()}.mdf;");
-
-            _context = new BlogContext(builder.Options);
-            //_context.Database.EnsureDeleted();
-            _context.Database.EnsureCreated();
-#else
-            //_context = new BlogContext(@"data source=.\EntityFramework.DynamicLinq.sqlite");
-            //_context = new BlogContext($"Server=(localdb)\\MSSQLLocalDB;Integrated Security=true;AttachDbFileName=.\\System.Linq.Dynamic.Core.{Guid.NewGuid()}.mdf;");
-            //_context = new BlogContext($"Filename=System.Linq.Dynamic.Core.{Guid.NewGuid()}.sqlitedb");
-            _context = new BlogContext($"data source=(LocalDB)\\MSSQLLocalDB;attachdbfilename=|DataDirectory|\\System.Linq.Dynamic.Core.{Guid.NewGuid()}.mdf;integrated security=True;connect timeout=30;MultipleActiveResultSets=True;App=EntityFramework");
-            //_context.Database.Delete();
-            //_context.Database.CreateIfNotExists();
-#endif
+        }
+        else
+        {
+            builder.UseSqlServer(fixture.ConnectionString);
         }
 
-        // Use TestCleanup to run code after each test has run
-        public void Dispose()
-        {
-#if EFCORE
-            _context.Database.EnsureDeleted();
+        _context = new BlogContext(builder.Options);
+        _context.Database.EnsureCreated();
 #else
-            _context.Database.Delete();
+        _context = new BlogContext(fixture.ConnectionString);
 #endif
-            _context.Dispose();
-            _context = null;
+        InternalPopulateTestData();
+    }
+
+    private void InternalPopulateTestData()
+    {
+        if (_context.Blogs.Any())
+        {
+            return;
         }
 
-        private void PopulateTestData(int blogCount = 25, int postCount = 10)
+        for (int i = 0; i < 25; i++)
         {
-            for (int i = 0; i < blogCount; i++)
+            var blog = new Blog
             {
-                var blog = new Blog { X = i.ToString(), Name = "Blog" + (i + 1), BlogId = 1000 + i, Created = DateTime.Now.AddDays(-Rnd.Next(0, 100)) };
+                X = i.ToString(),
+                Name = "Blog" + (i + 1),
+                BlogId = 1000 + i,
+                Created = DateTime.Now.AddDays(-Rnd.Next(0, 100))
+            };
 
-                _context.Blogs.Add(blog);
+            _context.Blogs.Add(blog);
 
-                for (int j = 0; j < postCount; j++)
+            for (int j = 0; j < 10; j++)
+            {
+                var postDate = DateTime.Today.AddDays(-Rnd.Next(0, 100)).AddSeconds(Rnd.Next(0, 30000));
+                var post = new Post
                 {
-                    var post = new Post
-                    {
-                        Blog = blog,
-                        Title = $"Blog {i + 1} - Post {j + 1}",
-                        Content = "My Content",
-                        PostDate = DateTime.Today.AddDays(-Rnd.Next(0, 100)).AddSeconds(Rnd.Next(0, 30000)),
-                        NumberOfReads = Rnd.Next(0, 5000)
-                    };
+                    PostId = 10000 + i * 10 + j,
+                    Blog = blog,
+                    Title = $"Blog {i + 1} - Post {j + 1}",
+                    Content = "My Content",
+                    PostDate = postDate,
+                    CloseDate = Rnd.Next(0, 10) < 5 ? postDate.AddDays(1) : null,
+                    NumberOfReads = Rnd.Next(0, 5000)
+                };
 
-                    _context.Posts.Add(post);
-                }
+                _context.Posts.Add(post);
             }
-
-            _context.SaveChanges();
         }
+
+        var singleBlog = new Blog
+        {
+            X = "42",
+            Name = "SingleBlog",
+            BlogId = 12345678,
+            Created = DateTime.Now.AddDays(-Rnd.Next(0, 100))
+        };
+        _context.Blogs.Add(singleBlog);
+
+        _context.Blogs.Add(new Blog { BlogId = 2000, X = "0", Name = "blog a", Created = DateTime.Now });
+        _context.Blogs.Add(new Blog { BlogId = 2001, X = "0", Name = "blog b", Created = DateTime.Now });
+        _context.Blogs.Add(new Blog { BlogId = 3000, X = "0", Name = "Blog1", Created = DateTime.Now, NullableInt = null });
+        _context.Blogs.Add(new Blog { BlogId = 3001, X = "0", Name = "Blog2", Created = DateTime.Now, NullableInt = 5 });
+
+        _context.SaveChanges();
     }
 }

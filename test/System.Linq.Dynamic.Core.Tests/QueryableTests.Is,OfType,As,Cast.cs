@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq.Dynamic.Core.CustomTypeProviders;
 using System.Linq.Dynamic.Core.Exceptions;
 using System.Linq.Dynamic.Core.Tests.Entities;
 using FluentAssertions;
@@ -98,6 +99,7 @@ namespace System.Linq.Dynamic.Core.Tests
 
         internal class Base { }
 
+        [DynamicLinqType]
         internal class DerivedA : Base { }
 
         internal class DerivedB : Base { }
@@ -294,7 +296,8 @@ namespace System.Linq.Dynamic.Core.Tests
             countAsDynamic.Should().Be(count);
         }
 
-        public enum TestEnum
+        [DynamicLinqType]
+        public enum TestEnumForThisTest
         {
             None = 0,
 
@@ -305,10 +308,10 @@ namespace System.Linq.Dynamic.Core.Tests
         public void As_Dynamic_ActingOnProperty_NullableEnum()
         {
             // Assign
-            var nullableEnumType = $"{typeof(TestEnum).FullName}?";
+            var nullableEnumType = $"{typeof(TestEnumForThisTest).FullName}?";
             var qry = new[]
             {
-                new { Value = TestEnum.X }
+                new { Value = TestEnumForThisTest.X }
             }.AsQueryable();
 
             // Act
@@ -365,7 +368,10 @@ namespace System.Linq.Dynamic.Core.Tests
             countAsDynamic.Should().Be(1);
         }
 
+        [DynamicLinqType]
         public class AS_A { }
+
+        [DynamicLinqType]
         public class AS_B : AS_A
         {
             public string MyProperty { get; set; }
@@ -486,6 +492,34 @@ namespace System.Linq.Dynamic.Core.Tests
 
             // Assert
             castDynamic.Should().BeEquivalentTo(new[] { 1, 2 });
+        }
+
+        // #440
+        [Fact]
+        public void CastToIntUsingParentheses()
+        {
+            // Assign
+            var qry = new[]
+            {
+                new User
+                {
+                    Id = 1,
+                    DisplayName = "" + (char) 109
+                },
+                new User
+                {
+                    Id = 2,
+                    DisplayName = "abc"
+                }
+            }.AsQueryable();
+
+            // Act
+            var result1 = qry.Where("DisplayName.Any(int(it) >= 109) and Id > 0").ToDynamicArray<User>();
+            var result2 = qry.Where("Id > 0 && DisplayName.Any(int(it) >= 109)").ToDynamicArray<User>();
+
+            // Assert
+            result1.Should().HaveCount(1).And.Subject.First().Id.Should().Be(1);
+            result2.Should().HaveCount(1).And.Subject.First().Id.Should().Be(1);
         }
 
         [Fact]
